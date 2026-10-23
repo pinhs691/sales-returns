@@ -581,6 +581,30 @@
     }
     .user-form-actions { display: flex; gap: 8px; justify-content: flex-start; }
     .modal-error { margin-bottom: 12px; }
+
+    /* Address book: customer window and the manage list */
+    .cust-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+    .cust-fields .field-wide { grid-column: 1 / -1; }
+    .field-missing > span { color: #b45309; }
+    .field-missing input { border-color: #f59e0b; background: #fffbeb; }
+    .modal-box.modal-xwide { max-width: 860px; }
+    .manage-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+    .manage-search {
+      flex: 1;
+      min-width: 200px;
+      padding: 9px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.95rem;
+    }
+    .manage-search:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+    .manage-table td { vertical-align: middle; }
+    .manage-actions { display: flex; gap: 6px; }
+    .manage-actions .btn { padding: 4px 10px; font-size: 0.8rem; }
+    @media (max-width: 520px) {
+      .cust-fields { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -660,7 +684,9 @@
         <div id="abLoadedBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius);flex-wrap:wrap;">
           <span style="font-size:1.3rem;">📋</span>
           <span id="abCacheInfo" style="flex:1;color:var(--navy);font-weight:600;font-size:0.95rem;"></span>
-          <label for="abFileInput" id="abUpdateBtn" class="btn btn-secondary" style="padding:8px 16px;font-size:0.9rem;cursor:pointer;margin:0;">🔄 עדכן קובץ</label>
+          <button id="abNewCustBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">➕ הוסף לקוח</button>
+          <button id="abManageBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">📋 ניהול המאגר</button>
+          <label for="abFileInput" id="abUpdateBtn" class="btn btn-secondary" style="padding:8px 16px;font-size:0.9rem;cursor:pointer;margin:0;">🔄 עדכן מקובץ</label>
           <button id="abClearCacheBtn" class="btn btn-danger" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">🗑️ מחק מאגר</button>
         </div>
         <div id="abSearchWrap" class="hidden" style="margin-top:20px">
@@ -816,6 +842,48 @@
                color:var(--navy);outline:none;transition:border 0.15s;">
       <button id="abPkgConfirm" class="btn btn-success" type="button" style="padding:9px 18px;">✓ אשר</button>
       <button id="abPkgCancel"  class="btn btn-secondary" type="button" style="padding:9px 12px;">✕</button>
+    </div>
+  </div>
+
+  <!-- Address book: the whole list, to fix and remove customers -->
+  <div id="abManageModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="abManageTitle">
+    <div class="modal-box modal-wide modal-xwide">
+      <div class="modal-head">
+        <div class="modal-title" id="abManageTitle">ניהול מאגר הכתובות</div>
+        <button class="btn btn-primary" id="abManageAdd" type="button" style="padding:8px 14px;font-size:0.9rem;">➕ הוסף לקוח</button>
+      </div>
+      <div class="manage-filters">
+        <input type="text" id="abManageSearch" class="manage-search" placeholder="חפש שם, עיר, רחוב, טלפון...">
+        <label class="field-check" style="margin:0;"><input type="checkbox" id="abManageMissing"> רק חסרי פרטים (<span id="abManageMissingCount">0</span>)</label>
+        <span id="abManageInfo" class="selected-count"></span>
+      </div>
+      <div class="preview-wrap" style="max-height:60vh;">
+        <table class="preview-table manage-table">
+          <thead><tr><th></th><th>שם</th><th>טלפון</th><th>עיר</th><th>רחוב</th><th>מספר בית</th><th>מצב</th></tr></thead>
+          <tbody id="abManageBody"></tbody>
+        </table>
+      </div>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="modal-cancel" id="abManageClose" type="button">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Address book: one customer (complete missing details on selection, add, edit) -->
+  <div id="custModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="custTitle">
+    <div class="modal-box" style="text-align:right;max-width:480px;max-height:92vh;overflow:auto;">
+      <div class="modal-title" id="custTitle" style="margin-bottom:6px;"></div>
+      <div class="modal-subtitle" id="custNote" style="margin-bottom:16px;"></div>
+      <div id="custError" class="alert alert-error modal-error hidden"></div>
+      <form id="custForm" autocomplete="off">
+        <div class="cust-fields" id="custFields"></div>
+        <label class="field hidden" id="custPkgField"><span>כמה קרטונים?</span>
+          <input type="number" id="custPkgInput" value="1" min="1" max="999" style="width:100px;"></label>
+        <div class="user-form-actions">
+          <button class="btn btn-success" type="submit" id="custSaveBtn" style="padding:10px 22px;">✓ אישור</button>
+          <button class="btn btn-secondary" type="button" id="custCancelBtn">ביטול</button>
+        </div>
+      </form>
     </div>
   </div>
 
@@ -2011,16 +2079,25 @@
       updateSourceCheckUI();
 
       // ─── Address Book ────────────────────────────────────────────────────────
+      // The customers live on the server, one row each. Everyone signed in can add, fix and remove
+      // customers; only an admin uploads a file (merged into what is there) or empties the whole list.
       const addressBook = {};
       (function() {
         const AB_DISPLAY_COLUMNS = [
-          'שם פרטי', 'שם משפחה', 'טלפון', 'עיר', 'רחוב', 'מספר בית',
-          'קומה', 'דירה', 'הערות משלוח', 'מזהה הזמנה'
+          'שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית',
+          'קומה', 'דירה', 'הערות משלוח'
         ];
+        // What the customer window shows, and what a customer needs before a courier can reach them.
+        const CUST_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח'];
+        const REQUIRED_FIELDS = ['טלפון', 'עיר', 'רחוב'];
+        const CUST_ID_HEADERS = ['מס. לקוח', 'מס לקוח', 'מספר לקוח', "מס' לקוח"];
+        const MANAGE_LIMIT = 200;
 
         let abRows = [];
+        let abNextIdx = 0;
         let abFilteredRows = [];
         let selectedAbPackages = new Map();
+        let abMeta = {};
 
         let popupPendingAbIdx = null;
         let popupPendingCb    = null;
@@ -2032,6 +2109,10 @@
         const abLoadedBar      = document.getElementById('abLoadedBar');
         const abCacheInfo      = document.getElementById('abCacheInfo');
         const abClearCacheBtn  = document.getElementById('abClearCacheBtn');
+        const abUpdateBtn      = document.getElementById('abUpdateBtn');
+        const abNewCustBtn     = document.getElementById('abNewCustBtn');
+        const abManageBtn      = document.getElementById('abManageBtn');
+        const abStatusNote     = document.getElementById('abStatusNote');
         const abSearchWrap     = document.getElementById('abSearchWrap');
         const abSearchInput    = document.getElementById('abSearchInput');
         const abLoadedInfo     = document.getElementById('abLoadedInfo');
@@ -2049,9 +2130,29 @@
         const abPkgConfirm = document.getElementById('abPkgConfirm');
         const abPkgCancel  = document.getElementById('abPkgCancel');
 
+        const custModal      = document.getElementById('custModal');
+        const custTitle      = document.getElementById('custTitle');
+        const custNote       = document.getElementById('custNote');
+        const custError      = document.getElementById('custError');
+        const custForm       = document.getElementById('custForm');
+        const custFieldsWrap = document.getElementById('custFields');
+        const custPkgField   = document.getElementById('custPkgField');
+        const custPkgInput   = document.getElementById('custPkgInput');
+        const custSaveBtn    = document.getElementById('custSaveBtn');
+        const custCancelBtn  = document.getElementById('custCancelBtn');
+
+        const manageModal    = document.getElementById('abManageModal');
+        const manageSearch   = document.getElementById('abManageSearch');
+        const manageMissing  = document.getElementById('abManageMissing');
+        const manageMissingCount = document.getElementById('abManageMissingCount');
+        const manageInfo     = document.getElementById('abManageInfo');
+        const manageBody     = document.getElementById('abManageBody');
+        const manageCloseBtn = document.getElementById('abManageClose');
+        const manageAddBtn   = document.getElementById('abManageAdd');
+
         function abNorm(h) {
           return String(h || '')
-            .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff\u00a0\u2007\u202f]/g, '')
+            .replace(/[‎‏‪-‮⁦-⁩﻿   ]/g, '')
             .replace(/[''׳ʼ]/g, "'")
             .replace(/\s+/g, ' ')
             .trim();
@@ -2063,56 +2164,56 @@
             .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
-        const abStatusNote     = document.getElementById('abStatusNote');
-        const abUpdateBtn      = document.getElementById('abUpdateBtn');
-
-        // The address book lives on the server: one shared list that only an admin replaces.
-        // Rows travel as arrays in DELIVERY_COLUMNS order to keep the upload small.
-        function abSaveToServer(rows, fileName) {
-          const packed = rows.map(function(row) {
-            return DELIVERY_COLUMNS.map(function(col) { return row[col] || ''; });
-          });
-          return rpc('dlv_ab_save', { p_token: authToken, p_file_name: fileName, p_columns: DELIVERY_COLUMNS, p_rows: packed });
-        }
-
-        function abUnpack(columns, rows) {
-          return (rows || []).map(function(arr, i) {
-            const obj = { _abIdx: i };
-            DELIVERY_COLUMNS.forEach(function(col) {
-              const idx = (columns || []).indexOf(col);
-              obj[col] = idx >= 0 && arr[idx] != null ? String(arr[idx]) : '';
-            });
-            return obj;
-          });
-        }
-
         function abSetNote(text) {
           abStatusNote.textContent = text || '';
           abStatusNote.classList.toggle('hidden', !text);
         }
 
-        function showLoadedBar(fileName, count, savedAt, savedBy) {
-          abUploadZone.classList.add('hidden');
-          abSetNote('');
-          abLoadedBar.classList.remove('hidden');
-          abUpdateBtn.classList.toggle('hidden', !isAdmin());
-          abClearCacheBtn.classList.toggle('hidden', !isAdmin());
-          const d = savedAt
-            ? new Date(savedAt).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' })
-            : '';
-          abCacheInfo.textContent = fileName + ' — ' + count + ' כתובות' +
-            (d ? '  |  עודכן ' + d : '') + (savedBy ? ' ע"י ' + savedBy : '');
+        function missingFields(row) {
+          return REQUIRED_FIELDS.filter(function(col) { return !String(row[col] || '').trim(); });
         }
 
-        // No address book yet: the admin gets the upload box, everyone else a note.
-        function showUploadZone() {
-          abLoadedBar.classList.add('hidden');
-          abUploadZone.classList.toggle('hidden', !isAdmin());
-          abSetNote(isAdmin() ? '' : 'מאגר הכתובות עוד לא הועלה. המנהל מעלה אותו.');
-          abSearchWrap.classList.add('hidden');
-          abRows = []; abFilteredRows = [];
-          selectedAbPackages.clear();
-          hideAbPopup(true);
+        function rowFromServer(item) {
+          const obj = { _abIdx: abNextIdx++, _id: item.id };
+          const d = item.d || {};
+          DELIVERY_COLUMNS.forEach(function(col) { obj[col] = d[col] != null ? String(d[col]) : ''; });
+          return obj;
+        }
+
+        function rowData(row) {
+          const d = {};
+          DELIVERY_COLUMNS.forEach(function(col) {
+            const v = String(row[col] || '').trim();
+            if (v) d[col] = v;
+          });
+          return d;
+        }
+
+        function findRow(abIdx) {
+          return abRows.find(function(r) { return r._abIdx === abIdx; });
+        }
+
+        // ---------- the bar above the search ----------
+        function refreshAbInfo() {
+          const count = abRows.length;
+          const missing = abRows.filter(function(r) { return missingFields(r).length; }).length;
+          abLoadedBar.classList.remove('hidden');
+          abUpdateBtn.classList.toggle('hidden', !isAdmin());
+          abClearCacheBtn.classList.toggle('hidden', !isAdmin() || !count);
+          abUploadZone.classList.toggle('hidden', !isAdmin() || count > 0);
+          abSearchWrap.classList.toggle('hidden', !count);
+          let info = count ? (count + ' לקוחות במאגר') : 'המאגר ריק';
+          if (missing) info += '  |  ' + missing + ' חסרי פרטים';
+          if (abMeta.file_name) {
+            const d = abMeta.uploaded_at
+              ? new Date(abMeta.uploaded_at).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' })
+              : '';
+            info += '  |  קובץ אחרון: ' + abMeta.file_name + (d ? ' (' + d + (abMeta.uploaded_by ? ', ' + abMeta.uploaded_by : '') + ')' : '');
+          }
+          abCacheInfo.textContent = info;
+          abLoadedInfo.textContent = count + ' לקוחות';
+          abSetNote(!count && !isAdmin() ? 'המאגר עוד ריק. אפשר להוסיף לקוחות בכפתור "הוסף לקוח", והמנהל יכול להעלות קובץ.' : '');
+          manageMissingCount.textContent = missing;
         }
 
         function updateAbSelectedCount() {
@@ -2121,6 +2222,7 @@
           abAddBtn.disabled = n === 0;
         }
 
+        // ---------- cartons popup ----------
         function positionPopup(anchorEl) {
           const r = anchorEl.getBoundingClientRect();
           let top  = r.bottom + 8;
@@ -2156,31 +2258,28 @@
           positionPopup(anchorEl);
         }
 
-        function confirmAbPopup() {
-          const count = Math.max(1, parseInt(abPkgInput.value, 10) || 1);
-          if (popupBulkRows) {
-            popupBulkRows.forEach(function(r) { selectedAbPackages.set(r._abIdx, count); });
-            abBody.querySelectorAll('tr').forEach(function(tr) {
-              const cb = tr.querySelector('input.ab-row-check');
-              if (!cb) return;
-              const idx = parseInt(cb.dataset.abIndex, 10);
-              if (selectedAbPackages.has(idx)) {
-                cb.checked = true;
-                tr.style.background = '#eff6ff';
-                setRowBadge(tr, count);
-              }
-            });
-          } else {
-            selectedAbPackages.set(popupPendingAbIdx, count);
-            popupPendingCb.checked = true;
-            popupPendingTr.style.background = '#eff6ff';
-            setRowBadge(popupPendingTr, count);
-          }
-          hideAbPopup(false);
+        function markSelected(abIdx, count) {
+          selectedAbPackages.set(abIdx, count);
           updateAbSelectedCount();
           abSearchInput.value = '';
           abSearch();
           abSearchInput.focus();
+        }
+
+        function confirmAbPopup() {
+          const count = Math.max(1, parseInt(abPkgInput.value, 10) || 1);
+          if (popupBulkRows) {
+            popupBulkRows.forEach(function(r) { selectedAbPackages.set(r._abIdx, count); });
+            hideAbPopup(false);
+            updateAbSelectedCount();
+            abSearchInput.value = '';
+            abSearch();
+            abSearchInput.focus();
+            return;
+          }
+          const idx = popupPendingAbIdx;
+          hideAbPopup(false);
+          markSelected(idx, count);
         }
 
         function hideAbPopup(cancelled) {
@@ -2224,10 +2323,121 @@
           if (!abPkgPopup.contains(e.target)) hideAbPopup(true);
         });
 
+        // ---------- customer window: complete on selection, add, edit ----------
+        // mode 'select': a chosen customer is missing details. Whatever is filled is saved to the
+        //   address book; "אישור" with nothing filled adds the customer to the deliveries as is.
+        // mode 'add': a new customer for the address book. mode 'edit': fixing one from the list.
+        let custState = null;
+
+        function openCustomer(mode, row, extra) {
+          custState = { mode: mode, row: row, extra: extra || {} };
+          const missing = row ? missingFields(row) : [];
+          custTitle.textContent = mode === 'select' ? 'חסרים פרטים: ' + (row['שם פרטי'] || 'לקוח')
+            : mode === 'add' ? 'לקוח חדש למאגר' : 'עריכת לקוח: ' + (row['שם פרטי'] || '');
+          custNote.textContent = mode === 'select'
+            ? 'חסר: ' + missing.join(', ') + '. מה שתשלים יישמר במאגר לפעם הבאה. אפשר גם ללחוץ "אישור" בלי להשלים, והלקוח ייכנס למשלוח כמו שהוא.'
+            : mode === 'add' ? 'הלקוח יישמר בשרת ויופיע לכל המשתמשים.' : 'השינויים יישמרו בשרת לכל המשתמשים.';
+          custFieldsWrap.innerHTML = CUST_FIELDS.map(function(col) {
+            const isMissing = mode !== 'add' && missing.indexOf(col) >= 0;
+            const wide = col === 'הערות משלוח' || col === 'שם פרטי';
+            return '<label class="field' + (isMissing ? ' field-missing' : '') + (wide ? ' field-wide' : '') + '">' +
+              '<span>' + abEscapeHtml(col === 'שם פרטי' ? 'שם' : col) + (isMissing ? ' (חסר)' : '') + '</span>' +
+              '<input data-col="' + abEscapeHtml(col) + '" value="' + abEscapeHtml(row ? row[col] : '') + '"' +
+              (col === 'טלפון' ? ' inputmode="tel"' : '') + '></label>';
+          }).join('');
+          custPkgField.classList.toggle('hidden', mode !== 'select');
+          custPkgInput.value = mode === 'select' && selectedAbPackages.has(row._abIdx) ? String(selectedAbPackages.get(row._abIdx)) : '1';
+          custError.classList.add('hidden');
+          custSaveBtn.disabled = false;
+          custModal.classList.remove('hidden');
+          const first = custFieldsWrap.querySelector('.field-missing input') || custFieldsWrap.querySelector('input');
+          if (first) first.focus();
+        }
+
+        function closeCustomer(cancelled) {
+          if (cancelled && custState && custState.mode === 'select') {
+            const ex = custState.extra;
+            if (ex.cb && !selectedAbPackages.has(custState.row._abIdx)) {
+              ex.cb.checked = false;
+              if (ex.tr) ex.tr.style.background = '';
+            }
+          }
+          custModal.classList.add('hidden');
+          custState = null;
+        }
+
+        function custValues() {
+          const vals = {};
+          custFieldsWrap.querySelectorAll('input[data-col]').forEach(function(input) {
+            vals[input.dataset.col] = input.value.trim();
+          });
+          return vals;
+        }
+
+        async function saveCustomer(e) {
+          e.preventDefault();
+          if (!custState) return;
+          const st = custState;
+          const vals = custValues();
+          const base = st.row || {};
+          const changed = CUST_FIELDS.some(function(col) { return vals[col] !== String(base[col] || '').trim(); });
+
+          if (st.mode === 'add' && !vals['שם פרטי']) {
+            custError.textContent = 'צריך לפחות שם ללקוח.';
+            custError.classList.remove('hidden');
+            return;
+          }
+
+          let row = st.row;
+          if (changed || st.mode === 'add') {
+            const data = st.row ? rowData(st.row) : {};
+            CUST_FIELDS.forEach(function(col) {
+              if (vals[col]) data[col] = vals[col]; else delete data[col];
+            });
+            custSaveBtn.disabled = true;
+            let saved;
+            try {
+              saved = await rpc('dlv_ab_row_save', { p_token: authToken, p_id: st.row ? st.row._id : null, p_data: data });
+            } catch (err) {
+              custSaveBtn.disabled = false;
+              custError.textContent = 'לא נשמר בשרת: ' + serverErrorText(err);
+              custError.classList.remove('hidden');
+              return;
+            }
+            if (st.row) {
+              DELIVERY_COLUMNS.forEach(function(col) { st.row[col] = saved.d[col] != null ? String(saved.d[col]) : ''; });
+            } else {
+              row = rowFromServer(saved);
+              abRows.push(row);
+            }
+          }
+
+          const count = Math.max(1, parseInt(custPkgInput.value, 10) || 1);
+          custModal.classList.add('hidden');
+          custState = null;
+          refreshAbInfo();
+          if (!manageModal.classList.contains('hidden')) renderManage();
+
+          if (st.mode === 'select') {
+            markSelected(row._abIdx, count);
+            if (changed) showAlert('הפרטים של ' + (row['שם פרטי'] || 'הלקוח') + ' נשמרו במאגר.', 'success');
+          } else {
+            abSearch();
+            showAlert(st.mode === 'add' ? 'הלקוח ' + row['שם פרטי'] + ' נוסף למאגר.' : (changed ? 'הלקוח עודכן במאגר.' : 'לא היה מה לשמור.'), changed || st.mode === 'add' ? 'success' : 'info');
+          }
+        }
+
+        custForm.addEventListener('submit', saveCustomer);
+        custCancelBtn.addEventListener('click', function() { closeCustomer(true); });
+        custModal.addEventListener('click', function(e) { if (e.target === custModal) closeCustomer(true); });
+        custModal.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCustomer(true); });
+
+        // ---------- search table ----------
         function renderAbTable(filtered) {
           abFilteredRows = filtered;
           const allVisible = filtered.length > 0 && filtered.every(function(r) { return selectedAbPackages.has(r._abIdx); });
           let headHtml = '<th class="preview-select"><input type="checkbox" id="abSelectAllCheck"' + (allVisible ? ' checked' : '') + ' title="בחר הכל הנראה"></th>';
+          headHtml += '<th class="preview-editable"></th>';
           AB_DISPLAY_COLUMNS.forEach(function(col) {
             headHtml += '<th class="preview-editable" data-column="' + abEscapeHtml(col) + '">' + abEscapeHtml(col) + '</th>';
           });
@@ -2257,7 +2467,7 @@
           if (!filtered.length) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = AB_DISPLAY_COLUMNS.length + 1;
+            td.colSpan = AB_DISPLAY_COLUMNS.length + 2;
             td.style.cssText = 'text-align:center;color:var(--muted);padding:24px;';
             td.textContent = 'לא נמצאו תוצאות';
             tr.appendChild(td); abBody.appendChild(tr);
@@ -2268,6 +2478,7 @@
             const abIdx    = row._abIdx;
             const pkgCount = selectedAbPackages.get(abIdx);
             const isChecked = pkgCount !== undefined;
+            const missing = missingFields(row);
             const tr = document.createElement('tr');
             if (isChecked) tr.style.background = '#eff6ff';
 
@@ -2278,12 +2489,22 @@
             cb.dataset.abIndex = String(abIdx);
             cb.checked = isChecked;
             cb.addEventListener('change', function() {
-              if (cb.checked) { showAbPopupFor(cb, tr, abIdx); }
-              else { selectedAbPackages.delete(abIdx); tr.style.background = ''; removeRowBadge(tr); updateAbSelectedCount(); }
+              if (cb.checked) {
+                tr.style.background = '#eff6ff';
+                if (missingFields(row).length) openCustomer('select', row, { cb: cb, tr: tr });
+                else showAbPopupFor(cb, tr, abIdx);
+              } else {
+                selectedAbPackages.delete(abIdx); tr.style.background = ''; removeRowBadge(tr); updateAbSelectedCount();
+              }
             });
             checkTd.appendChild(cb);
             if (isChecked) { requestAnimationFrame(function() { setRowBadge(tr, pkgCount); }); }
             tr.appendChild(checkTd);
+
+            const flagTd = document.createElement('td');
+            flagTd.className = 'preview-editable';
+            if (missing.length) flagTd.innerHTML = '<span class="tag tag-pending" title="חסר: ' + abEscapeHtml(missing.join(', ')) + '">חסר ' + abEscapeHtml(missing.join(', ')) + '</span>';
+            tr.appendChild(flagTd);
 
             AB_DISPLAY_COLUMNS.forEach(function(col) {
               const td = document.createElement('td');
@@ -2296,6 +2517,12 @@
             abBody.appendChild(tr);
           });
           updateAbSelectedCount();
+        }
+
+        function rowMatches(row, q) {
+          return DELIVERY_COLUMNS.some(function(col) {
+            return abNorm(row[col]).toLowerCase().indexOf(q) >= 0;
+          });
         }
 
         function abSearch() {
@@ -2314,19 +2541,83 @@
           abSearchHint.style.display = 'none';
 
           let results = abRows.slice();
-          if (q) {
-            results = results.filter(function(row) {
-              return DELIVERY_COLUMNS.some(function(col) {
-                return abNorm(row[col]).toLowerCase().indexOf(q) >= 0;
-              });
-            });
-          }
+          if (q) results = results.filter(function(row) { return rowMatches(row, q); });
           if (showSelectedOnly) {
             results = results.filter(function(row) { return selectedAbPackages.has(row._abIdx); });
           }
           renderAbTable(results);
         }
 
+        // ---------- manage the list ----------
+        function renderManage() {
+          const q = abNorm(manageSearch.value).toLowerCase();
+          let list = abRows;
+          if (manageMissing.checked) list = list.filter(function(r) { return missingFields(r).length; });
+          if (q) list = list.filter(function(r) { return rowMatches(r, q); });
+          const shown = list.slice(0, MANAGE_LIMIT);
+          manageInfo.textContent = list.length > MANAGE_LIMIT
+            ? 'מוצגים ' + MANAGE_LIMIT + ' מתוך ' + list.length + '. חפש כדי לצמצם.'
+            : list.length + ' לקוחות';
+          if (!shown.length) {
+            manageBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">לא נמצאו לקוחות</td></tr>';
+            return;
+          }
+          manageBody.innerHTML = shown.map(function(r) {
+            const missing = missingFields(r);
+            return '<tr>' +
+              '<td><div class="manage-actions">' +
+                '<button class="btn btn-secondary" type="button" data-act="edit" data-idx="' + r._abIdx + '">✏️ עריכה</button>' +
+                '<button class="btn btn-danger" type="button" data-act="delete" data-idx="' + r._abIdx + '" title="מחיקה">🗑️</button>' +
+              '</div></td>' +
+              '<td>' + abEscapeHtml(r['שם פרטי']) + '</td>' +
+              '<td>' + abEscapeHtml(r['טלפון']) + '</td>' +
+              '<td>' + abEscapeHtml(r['עיר']) + '</td>' +
+              '<td>' + abEscapeHtml(r['רחוב']) + '</td>' +
+              '<td>' + abEscapeHtml(r['מספר בית']) + '</td>' +
+              '<td>' + (missing.length ? '<span class="tag tag-pending">חסר ' + abEscapeHtml(missing.join(', ')) + '</span>' : '<span class="tag tag-ok">מלא</span>') + '</td>' +
+            '</tr>';
+          }).join('');
+        }
+
+        function openManage() {
+          manageSearch.value = '';
+          manageMissing.checked = false;
+          renderManage();
+          manageModal.classList.remove('hidden');
+          manageSearch.focus();
+        }
+
+        manageBody.addEventListener('click', async function(e) {
+          const btn = e.target.closest('button[data-act]');
+          if (!btn) return;
+          const row = findRow(parseInt(btn.dataset.idx, 10));
+          if (!row) return;
+          if (btn.dataset.act === 'edit') {
+            openCustomer('edit', row);
+            return;
+          }
+          if (!window.confirm('למחוק את ' + (row['שם פרטי'] || 'הלקוח') + ' מהמאגר? הוא יימחק לכל המשתמשים.')) return;
+          try {
+            await rpc('dlv_ab_row_delete', { p_token: authToken, p_id: row._id });
+          } catch (err) {
+            showAlert('הלקוח לא נמחק: ' + serverErrorText(err), 'error');
+            return;
+          }
+          abRows = abRows.filter(function(r) { return r !== row; });
+          selectedAbPackages.delete(row._abIdx);
+          refreshAbInfo();
+          renderManage();
+          abSearch();
+        });
+        manageSearch.addEventListener('input', renderManage);
+        manageMissing.addEventListener('change', renderManage);
+        manageCloseBtn.addEventListener('click', function() { manageModal.classList.add('hidden'); });
+        manageModal.addEventListener('click', function(e) { if (e.target === manageModal) manageModal.classList.add('hidden'); });
+        manageAddBtn.addEventListener('click', function() { openCustomer('add', null); });
+        abManageBtn.addEventListener('click', openManage);
+        abNewCustBtn.addEventListener('click', function() { openCustomer('add', null); });
+
+        // ---------- uploading a file (admin) ----------
         const AB_ALIASES = {
           'שם פרטי':    ['שם', 'שם פרטי', 'first name'],
           'מספר בית':   ['מספר', 'מספר בית', 'מס׳', "מס'", 'בית'],
@@ -2352,34 +2643,31 @@
           return -1;
         }
 
+        // Rows as {c: Priority customer number or null, d: {column: value}}, the way dlv_ab_import takes them.
         function abParseWorkbook(workbook) {
           const parsed = sheetToRows(workbook);
           const fileHeaders = parsed.headers.map(abNorm);
+          const custIdx = fileHeaders.findIndex(function(h) { return CUST_ID_HEADERS.map(abNorm).indexOf(h) >= 0; });
           const colIndexMap = {};
           const claimed = new Set();
+          if (custIdx >= 0) claimed.add(custIdx);
           DELIVERY_COLUMNS.forEach(function(col) {
             const idx = abFindColumnIndex(fileHeaders, col);
             if (idx >= 0 && !claimed.has(idx)) { colIndexMap[col] = idx; claimed.add(idx); }
             else { colIndexMap[col] = -1; }
           });
           return parsed.dataRows
-            .filter(function(row) { return row.some(function(cell) { return String(cell || '').trim(); }); })
-            .map(function(rawRow, i) {
-              const obj = { _abIdx: i };
+            .map(function(rawRow) {
+              const d = {};
               DELIVERY_COLUMNS.forEach(function(col) {
                 const idx = colIndexMap[col];
-                obj[col] = idx >= 0 ? String(rawRow[idx] || '').trim() : '';
+                const v = idx >= 0 ? String(rawRow[idx] == null ? '' : rawRow[idx]).trim() : '';
+                if (v) d[col] = v;
               });
-              return obj;
-            });
-        }
-
-        function abActivate(fileName, savedAt, savedBy) {
-          abLoadedInfo.textContent = abRows.length + ' כתובות';
-          showLoadedBar(fileName, abRows.length, savedAt, savedBy);
-          abSearchWrap.classList.remove('hidden');
-          abSearchInput.value = '';
-          abSearch();
+              const c = custIdx >= 0 ? String(rawRow[custIdx] == null ? '' : rawRow[custIdx]).trim() : '';
+              return { c: c || null, d: d };
+            })
+            .filter(function(item) { return Object.keys(item.d).length; });
         }
 
         async function abHandleFile(file) {
@@ -2398,24 +2686,25 @@
             showAlert('בקובץ המאגר אין שורות עם נתונים.', 'error');
             return;
           }
-          showAlert('מעלה את מאגר הכתובות לשרת...', 'info');
+          showAlert('מעלה ' + rows.length + ' לקוחות לשרת...', 'info');
+          let result;
           try {
-            await abSaveToServer(rows, file.name);
+            result = await rpc('dlv_ab_import', { p_token: authToken, p_file_name: file.name, p_rows: rows });
           } catch (err) {
             showAlert('המאגר לא נשמר בשרת: ' + serverErrorText(err), 'error');
             return;
           }
-          abRows = rows;
-          selectedAbPackages.clear();
-          abActivate(file.name, Date.now(), me && me.name);
-          showAlert('מאגר הכתובות נשמר בשרת (' + rows.length + ' כתובות) ויופיע לכל המשתמשים.', 'success');
+          await addressBook.load();
+          showAlert('המאגר עודכן: ' + result.added + ' לקוחות חדשים, ' + result.updated + ' עודכנו מהקובץ' +
+            (result.kept ? ', ' + result.kept + ' נשארו כמו שתוקנו או נמחקו במאגר' : '') + '.', 'success');
         }
 
+        // ---------- into the deliveries ----------
         function addSelectedToDeliveries() {
           if (!selectedAbPackages.size) return;
           const selectedRows = Array.from(selectedAbPackages.keys())
             .map(function(idx) {
-              const row = abRows.find(function(r) { return r._abIdx === idx; });
+              const row = findRow(idx);
               return row ? { row: row, count: selectedAbPackages.get(idx) } : null;
             })
             .filter(Boolean);
@@ -2497,14 +2786,15 @@
         });
         abAddBtn.addEventListener('click', addSelectedToDeliveries);
         abClearCacheBtn.addEventListener('click', async function() {
-          if (!window.confirm('למחוק את מאגר הכתובות מהשרת? הוא יימחק לכל המשתמשים, ותצטרך להעלות קובץ מחדש.')) return;
+          if (!window.confirm('למחוק את כל מאגר הכתובות מהשרת? הוא יימחק לכל המשתמשים, כולל לקוחות שנוספו ותיקונים שנעשו.')) return;
           try {
             await rpc('dlv_ab_clear', { p_token: authToken });
           } catch (err) {
             showAlert('המאגר לא נמחק: ' + serverErrorText(err), 'error');
             return;
           }
-          showUploadZone();
+          abRows = []; abMeta = {}; selectedAbPackages.clear();
+          refreshAbInfo();
           showAlert('מאגר הכתובות נמחק מהשרת.', 'info');
         });
 
@@ -2521,17 +2811,16 @@
             data = await rpc('dlv_ab_get', { p_token: authToken });
           } catch (err) {
             abSetNote('');
-            showUploadZone();
             showAlert('מאגר הכתובות לא נטען: ' + serverErrorText(err), 'error');
             return;
           }
-          if (data && data.row_count > 0) {
-            abRows = abUnpack(data.columns, data.rows);
-            selectedAbPackages.clear();
-            abActivate(data.file_name || 'מאגר כתובות', data.uploaded_at, data.uploaded_by);
-          } else {
-            showUploadZone();
-          }
+          abMeta = { file_name: data && data.file_name, uploaded_at: data && data.uploaded_at, uploaded_by: data && data.uploaded_by };
+          abNextIdx = 0;
+          abRows = ((data && data.rows) || []).map(rowFromServer);
+          selectedAbPackages.clear();
+          refreshAbInfo();
+          abSearchInput.value = '';
+          abSearch();
         };
       })();
 
