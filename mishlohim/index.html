@@ -1,0 +1,3022 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>המרת אקסל פריוריטי לחברת שליחויות</title>
+  <meta name="theme-color" content="#1a2b4a">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <style>
+    :root {
+      --navy: #1a2b4a;
+      --accent: #2563eb;
+      --accent-hover: #1d4ed8;
+      --success: #059669;
+      --bg: #eef2f7;
+      --card: #ffffff;
+      --border: #d1dae6;
+      --text: #1e293b;
+      --muted: #64748b;
+      --danger: #dc2626;
+      --radius: 8px;
+      --shadow: 0 4px 24px rgba(26, 43, 74, 0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      font-family: 'Heebo', Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      margin: 0;
+      padding: 24px 16px;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .header {
+      padding: 28px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(180deg, #fff 0%, #f8fafc 100%);
+      text-align: center;
+    }
+    .header h1 {
+      margin: 0 0 8px;
+      font-size: 1.6rem;
+      color: var(--navy);
+    }
+    .header p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .content { padding: 24px; }
+
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      background: #fafbfc;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .card h2 {
+      margin: 0 0 16px;
+      font-size: 1.1rem;
+      color: var(--navy);
+      border-bottom: 2px solid var(--bg);
+      padding-bottom: 8px;
+      display: inline-block;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #fff;
+      display: block;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--accent);
+      background: #eff6ff;
+    }
+    .upload-zone input { display: none; }
+    .upload-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.8; }
+    .file-name {
+      margin-top: 16px;
+      font-weight: 600;
+      color: var(--navy);
+      word-break: break-all;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
+    
+    .btn-success {
+      background: var(--success);
+      color: #fff;
+      padding: 14px 28px;
+      font-size: 1.05rem;
+    }
+    .btn-success:hover:not(:disabled) { background: #047857; box-shadow: 0 4px 12px rgba(5,150,105,0.2); }
+
+    .btn-secondary {
+      background: #fff;
+      color: var(--navy);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    .btn-danger {
+      background: #fff;
+      color: var(--danger);
+      border: 1px solid #fecaca;
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: #fef2f2;
+      border-color: var(--danger);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 24px;
+      justify-content: center;
+    }
+
+    .stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .stat-box {
+      flex: 1;
+      min-width: 140px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      text-align: center;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+    }
+    .stat-label { font-size: 0.9rem; color: var(--muted); margin-bottom: 4px; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; color: var(--navy); }
+
+    .alert {
+      padding: 16px;
+      border-radius: var(--radius);
+      margin-bottom: 20px;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .alert-error { background: #fef2f2; border: 1px solid #fecaca; color: var(--danger); }
+    .alert-success { background: #ecfdf5; border: 1px solid #a7f3d0; color: #047857; }
+    .alert-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+
+    .hidden { display: none !important; }
+
+    .preview-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 32px 0 16px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .preview-header h3 {
+      margin: 0;
+      font-size: 1.1rem;
+      color: var(--navy);
+    }
+
+    .preview-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      background: #f8fafc;
+      padding: 8px;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    
+    /* Uniform button styling for the toolbar */
+    .preview-toolbar .btn {
+      padding: 8px 16px;
+      font-size: 0.9rem;
+      height: 38px;
+      margin: 0;
+    }
+
+    .selected-count {
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 500;
+      padding: 0 8px;
+    }
+
+    .btn-source-check.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.25);
+    }
+
+    .preview-wrap {
+      overflow: auto;
+      max-height: 520px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: #fff;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .preview-table {
+      width: max-content;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+      table-layout: auto;
+    }
+    .preview-table th, .preview-table td {
+      border: 1px solid var(--border);
+      padding: 6px 8px;
+      text-align: right;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    .preview-table th {
+      background: #f1f5f9;
+      color: var(--navy);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+    
+    .preview-input {
+      width: auto;
+      min-width: 3ch;
+      max-width: none;
+      padding: 6px 8px;
+      border: 1px solid transparent; /* Hide border until interaction for a cleaner look */
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.85rem;
+      text-align: right;
+      background: transparent;
+      box-sizing: content-box;
+      field-sizing: content;
+      transition: border 0.2s, background 0.2s;
+    }
+    .preview-input:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+    }
+    .preview-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    
+    .preview-measure {
+      position: fixed;
+      top: -9999px;
+      left: -9999px;
+      visibility: hidden;
+      white-space: pre;
+      font-family: 'Heebo', Arial, sans-serif;
+      font-size: 0.85rem;
+      font-weight: 400;
+      padding: 0 8px;
+      pointer-events: none;
+    }
+    .preview-editable {
+      background: #fff;
+    }
+    .preview-select {
+      background: #f8fafc;
+      text-align: center;
+      white-space: nowrap;
+      width: 52px;
+      min-width: 52px;
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      box-shadow: 2px 0 6px rgba(26, 43, 74, 0.06);
+    }
+    .preview-table thead .preview-select {
+      z-index: 3;
+    }
+    .preview-select input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+    }
+
+    .preview-input.source-check-mode {
+      cursor: help;
+      background: #fffbeb;
+      border-color: #fde68a;
+    }
+    .preview-input.source-check-mode:hover {
+      background: #fef3c7;
+      border-color: #f59e0b;
+    }
+
+    .source-popup {
+      position: fixed;
+      z-index: 1000;
+      min-width: 220px;
+      max-width: 320px;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: 0 8px 32px rgba(26, 43, 74, 0.18);
+      padding: 16px;
+      font-size: 0.9rem;
+      line-height: 1.6;
+    }
+    .source-popup-title {
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 10px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .source-popup-row { margin-bottom: 6px; }
+    .source-popup-label { color: var(--muted); font-size: 0.85rem; }
+    .source-popup-value { color: var(--navy); font-weight: 600; word-break: break-word; }
+    .source-popup-close {
+      margin-top: 12px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #f8fafc;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      width: 100%;
+      transition: background 0.2s;
+    }
+    .source-popup-close:hover { background: #e2e8f0; }
+    .preview-col-hidden { display: none !important; }
+
+    .preview-delivery-days {
+      text-align: center;
+      white-space: nowrap;
+      vertical-align: middle;
+      min-width: 72px;
+      background: #f8fafc;
+    }
+    .preview-delivery-days .days-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      line-height: 1.2;
+    }
+    .days-regular { background: #dbeafe; color: #1d4ed8; }
+    .days-extended { background: #fef3c7; color: #b45309; }
+    .days-unknown { background: #f1f5f9; color: #64748b; font-weight: 500; }
+    .days-loading { color: #94a3b8; font-size: 0.8rem; }
+
+    .footer-note {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--muted);
+      padding: 16px 24px 24px;
+    }
+
+    /* Company picker modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-overlay.hidden { display: none !important; }
+    .modal-box {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(15, 23, 42, 0.25);
+      padding: 28px 32px;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      direction: rtl;
+    }
+    .modal-title { font-size: 1.15rem; font-weight: 700; color: var(--navy); margin: 0 0 6px; }
+    .modal-subtitle { font-size: 0.9rem; color: var(--muted); margin: 0 0 24px; }
+    .modal-choices { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .modal-choice-btn {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 20px; border: 2px solid var(--border);
+      border-radius: 10px; background: #fafbfc; cursor: pointer;
+      font-family: inherit; font-size: 1rem; font-weight: 600;
+      color: var(--navy); transition: all 0.18s; text-align: right;
+    }
+    .modal-choice-btn:hover { border-color: var(--accent); background: #eff6ff; color: var(--accent); box-shadow: 0 4px 12px rgba(37,99,235,0.12); }
+    .modal-choice-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .modal-choice-text { flex: 1; }
+    .modal-choice-name { display: block; font-weight: 700; }
+    .modal-choice-desc { display: block; font-size: 0.8rem; font-weight: 400; color: var(--muted); margin-top: 2px; }
+    .modal-cancel {
+      background: none; border: none; color: var(--muted);
+      font-family: inherit; font-size: 0.9rem; cursor: pointer;
+      padding: 6px 12px; border-radius: 6px; transition: background 0.15s;
+    }
+    .modal-cancel:hover { background: #f1f5f9; color: var(--text); }
+
+    /* Sign-in screen */
+    .auth-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 3000;
+      background: var(--bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      overflow: auto;
+    }
+    .auth-box {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      width: 100%;
+      max-width: 380px;
+    }
+    .auth-logo { font-size: 2.6rem; text-align: center; }
+    .auth-title { margin: 4px 0 4px; text-align: center; color: var(--navy); font-size: 1.4rem; }
+    .auth-sub { margin: 0 0 20px; text-align: center; color: var(--muted); font-size: 0.95rem; }
+    .field { display: block; margin-bottom: 14px; }
+    .field > span { display: block; font-size: 0.9rem; font-weight: 600; color: var(--navy); margin-bottom: 4px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 1rem;
+      background: #fff;
+      color: var(--text);
+    }
+    .field input:focus, .field select:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+    .field-check { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 0.95rem; }
+    .auth-submit { width: 100%; margin-top: 6px; }
+    .auth-note { text-align: center; color: var(--muted); font-size: 0.95rem; line-height: 1.7; }
+    .auth-pending-icon { font-size: 2.4rem; text-align: center; margin-bottom: 8px; }
+    .auth-actions { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; }
+
+    /* Signed-in user bar */
+    .user-bar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 0.9rem;
+    }
+    .user-bar .user-name { font-weight: 600; color: var(--navy); margin-left: auto; }
+    .user-bar .btn { padding: 6px 12px; font-size: 0.85rem; }
+    .pending-badge {
+      display: inline-block;
+      min-width: 20px;
+      padding: 0 6px;
+      border-radius: 10px;
+      background: var(--danger);
+      color: #fff;
+      font-size: 0.75rem;
+      line-height: 20px;
+      text-align: center;
+    }
+
+    /* Users and devices */
+    .modal-box.modal-wide {
+      max-width: 640px;
+      max-height: 88vh;
+      overflow: auto;
+      text-align: right;
+    }
+    .modal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .modal-head .modal-title { margin: 0; }
+    .user-card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: #fafbfc;
+    }
+    .user-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .user-card-name { font-weight: 700; color: var(--navy); }
+    .user-card-meta { color: var(--muted); font-size: 0.85rem; }
+    .user-card-head .btn { padding: 5px 10px; font-size: 0.8rem; }
+    .user-card-head .spacer { flex: 1; }
+    .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; }
+    .tag-admin { background: #dbeafe; color: #1d4ed8; }
+    .tag-off { background: #fee2e2; color: var(--danger); }
+    .tag-pending { background: #fef3c7; color: #b45309; }
+    .tag-ok { background: #dcfce7; color: #047857; }
+    .device-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .device-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+    }
+    .device-row.is-pending { border-color: #fcd34d; background: #fffbeb; }
+    .device-row .device-name { font-weight: 600; color: var(--navy); }
+    .device-row .device-when { color: var(--muted); font-size: 0.8rem; }
+    .device-row .spacer { flex: 1; }
+    .device-row .btn { padding: 4px 10px; font-size: 0.8rem; }
+    .device-none { color: var(--muted); font-size: 0.85rem; }
+    .user-form {
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      background: #f8fbff;
+    }
+    .user-form-actions { display: flex; gap: 8px; justify-content: flex-start; }
+    .modal-error { margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <!-- Sign-in: covers the page until a user from an approved device is signed in -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-box">
+      <div class="auth-logo">📦</div>
+      <h1 class="auth-title">משלוחים</h1>
+      <p class="auth-sub" id="authSub">מתחבר...</p>
+      <div id="authError" class="alert alert-error hidden"></div>
+
+      <form id="authForm" class="hidden" autocomplete="on">
+        <label class="field"><span>שם משתמש</span><input id="authUser" autocomplete="username" autocapitalize="off" spellcheck="false" required></label>
+        <label class="field"><span>סיסמה</span><input id="authPass" type="password" autocomplete="current-password" required></label>
+        <label class="field hidden" id="authNameField"><span>השם שלך</span><input id="authName" autocomplete="name"></label>
+        <label class="field" id="authDeviceField"><span>שם למכשיר הזה (לא חובה)</span><input id="authDevice" placeholder="למשל: מחשב במשרד"></label>
+        <button class="btn btn-primary auth-submit" type="submit" id="authSubmit">כניסה</button>
+      </form>
+
+      <div id="authPending" class="hidden">
+        <div class="auth-pending-icon">⏳</div>
+        <div class="auth-note">
+          המכשיר הזה ממתין לאישור של המנהל.<br>
+          אחרי שהבקשה תאושר, לחץ "בדוק שוב".
+        </div>
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="authRetry" type="button">🔄 בדוק שוב</button>
+          <button class="btn btn-secondary" id="authBack" type="button">חזרה</button>
+        </div>
+      </div>
+
+      <div id="authOffline" class="hidden">
+        <div class="auth-actions">
+          <button class="btn btn-primary" id="authOfflineRetry" type="button">🔄 נסה שוב</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="container hidden" id="appContainer">
+    <div class="header">
+      <div class="user-bar" id="userBar">
+        <span class="user-name" id="userName"></span>
+        <button class="btn btn-secondary hidden" id="usersBtn" type="button">👥 משתמשים ומכשירים <span class="pending-badge hidden" id="pendingBadge"></span></button>
+        <button class="btn btn-secondary" id="passwordBtn" type="button">🔑 החלפת סיסמה</button>
+        <button class="btn btn-secondary" id="logoutBtn" type="button">🚪 יציאה</button>
+      </div>
+      <h1>המרת אקסל פריוריטי לחברת שליחויות</h1>
+      <p>העלה קובץ ייצוא מהפריוריטי וקבל קובץ מוכן לייבוא (OrdersTemplateDel-he)</p>
+    </div>
+
+    <div class="content">
+      <div id="alertBox" class="hidden"></div>
+
+      <div class="card">
+        <h2>1. העלאת קובץ פריוריטי</h2>
+        <label class="upload-zone" id="uploadZone">
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+          <div class="upload-icon">📄</div>
+          <div>לחץ לבחירת קובץ או גרור לכאן</div>
+          <div style="color:var(--muted);font-size:0.9rem;margin-top:6px">פורמטים נתמכים: xlsx, xls, csv</div>
+          <div class="file-name" id="fileName"></div>
+        </label>
+      </div>
+
+      <!-- Address Book Card -->
+      <div class="card" id="addressBookCard">
+        <h2>2. חיפוש ממאגר כתובות</h2>
+        <input type="file" id="abFileInput" accept=".xlsx,.xls,.csv" style="display:none">
+        <div class="upload-zone hidden" id="abUploadZone" role="button" tabindex="0" style="cursor:pointer;">
+          <div class="upload-icon">📋</div>
+          <div>לחץ לבחירת קובץ מאגר כתובות</div>
+          <div style="color:var(--muted);font-size:0.9rem;margin-top:6px">הקובץ יישמר בשרת ויופיע לכל המשתמשים, בכל מכשיר</div>
+          <div class="file-name" id="abFileName"></div>
+        </div>
+        <div id="abStatusNote" class="auth-note hidden" style="padding:18px 0;"></div>
+        <div id="abLoadedBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius);flex-wrap:wrap;">
+          <span style="font-size:1.3rem;">📋</span>
+          <span id="abCacheInfo" style="flex:1;color:var(--navy);font-weight:600;font-size:0.95rem;"></span>
+          <label for="abFileInput" id="abUpdateBtn" class="btn btn-secondary" style="padding:8px 16px;font-size:0.9rem;cursor:pointer;margin:0;">🔄 עדכן קובץ</label>
+          <button id="abClearCacheBtn" class="btn btn-danger" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">🗑️ מחק מאגר</button>
+        </div>
+        <div id="abSearchWrap" class="hidden" style="margin-top:20px">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+            <input type="text" id="abSearchInput"
+              style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:1rem;background:#fff;color:var(--text);outline:none;transition:border 0.2s,box-shadow 0.2s;"
+              placeholder="חפש שם, עיר, רחוב, טלפון...">
+            <span id="abLoadedInfo" style="color:var(--muted);font-size:0.9rem;white-space:nowrap;"></span>
+          </div>
+          <div class="preview-toolbar" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+            <button class="btn btn-secondary" id="abSelectAllBtn" type="button">בחר הכל הנראה</button>
+            <button class="btn btn-secondary" id="abClearSelBtn" type="button">נקה בחירה</button>
+            <button class="btn btn-secondary" id="abShowSelectedBtn" type="button">הצג מסומנים</button>
+            <span class="selected-count" id="abSelectedCount">לא נבחרו שורות</span>
+          </div>
+          <div id="abTableWrap" class="preview-wrap" style="max-height:360px;display:none">
+            <table class="preview-table" id="abTable">
+              <thead id="abHead"></thead>
+              <tbody id="abBody"></tbody>
+            </table>
+          </div>
+          <div id="abSearchHint" style="text-align:center;color:var(--muted);padding:22px 0;font-size:0.97rem;">הקלד בשדה החיפוש כדי לחפש כתובות</div>
+          <div class="actions">
+            <button class="btn btn-success" id="abAddBtn" type="button" disabled>➕ הוסף משלוחים נבחרים</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card hidden" id="resultCard">
+        <h2>3. תוצאה</h2>
+        <div class="stats">
+          <div class="stat-box">
+            <div class="stat-label">שורות בקלט</div>
+            <div class="stat-value" id="statInput">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">משלוחים להמרה</div>
+            <div class="stat-value" id="statOutput">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-label">דולגו</div>
+            <div class="stat-value" id="statSkipped">0</div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-success" id="downloadBtn" type="button">
+            📥 הורד קובץ לחברת שליחויות
+          </button>
+        </div>
+
+        <div class="preview-header">
+          <h3 id="previewTitle">תצוגה מקדימה</h3>
+          <div class="preview-toolbar">
+            <button class="btn btn-secondary btn-source-check" id="sourceCheckBtn" type="button">🔍 בדיקת מקור שדה</button>
+            <button class="btn btn-secondary" id="deleteRowsBtn" type="button">🗑️ מחיקת שורות</button>
+            <button class="btn btn-secondary" id="tagRowsBtn" type="button">☑️ בחר</button>
+            <button class="btn btn-danger hidden" id="confirmDeleteRowsBtn" type="button" disabled>🗑️ מחק נבחרות</button>
+            <button class="btn btn-secondary hidden" id="cancelDeleteRowsBtn" type="button">❌ ביטול</button>
+            <button class="btn btn-secondary hidden" id="tagFragileBtn" type="button">🔸 שביר</button>
+            <button class="btn btn-secondary hidden" id="tagChocolateBtn" type="button">🍫 מכיל שוקולדים</button>
+            <button class="btn btn-secondary hidden" id="cancelTagRowsBtn" type="button">❌ ביטול</button>
+            <span class="selected-count hidden" id="selectedRowsCount"></span>
+            <span class="selected-count hidden" id="tagRowsCount"></span>
+            <button class="btn btn-secondary hidden" id="toggleColumnsBtn" type="button">
+              👁️ הצג הכל
+            </button>
+          </div>
+        </div>
+        <div class="preview-wrap">
+          <table class="preview-table" id="previewTable">
+            <thead id="previewHead"></thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      הקובץ מעובד באופן מקומי בדפדפן. בדיקת ימי עסקים לפי <a href="https://send-whatsapp-delta.vercel.app/delivery-check" target="_blank" rel="noopener noreferrer">מערכת מועדי הפצה</a>.
+    </div>
+  </div>
+
+  <!-- Company picker modal -->
+  <div id="companyPickerModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-box">
+      <div class="modal-title" id="modalTitle">בחר חברת שליחויות</div>
+      <div class="modal-subtitle">הקובץ הורד — כעת בחר לאיזה אתר לעלות אותו</div>
+      <div class="modal-choices">
+        <button class="modal-choice-btn" id="pickIzkovitch" type="button">
+          <span class="modal-choice-icon">🦁</span>
+          <span class="modal-choice-text">
+            <span class="modal-choice-name">איצקוביץ (Lionwheel)</span>
+            <span class="modal-choice-desc">members.lionwheel.com</span>
+          </span>
+        </button>
+        <button class="modal-choice-btn" id="pickShipnest" type="button">
+          <span class="modal-choice-icon">📦</span>
+          <span class="modal-choice-text">
+            <span class="modal-choice-name">שיפינג (ShipNest)</span>
+            <span class="modal-choice-desc">shipnest.io</span>
+          </span>
+        </button>
+      </div>
+      <button class="modal-cancel" id="cancelCompanyPicker" type="button">ביטול</button>
+    </div>
+  </div>
+
+  <!-- Users and devices (admin) -->
+  <div id="usersModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="usersModalTitle">
+    <div class="modal-box modal-wide">
+      <div class="modal-head">
+        <div class="modal-title" id="usersModalTitle">משתמשים ומכשירים</div>
+        <button class="btn btn-primary" id="addUserBtn" type="button" style="padding:8px 14px;font-size:0.9rem;">➕ משתמש חדש</button>
+      </div>
+      <div id="usersError" class="alert alert-error modal-error hidden"></div>
+      <div id="userFormWrap"></div>
+      <div id="usersList"></div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="modal-cancel" id="closeUsersBtn" type="button">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change password -->
+  <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+    <div class="modal-box" style="text-align:right;">
+      <div class="modal-title" id="passwordModalTitle" style="margin-bottom:16px;">החלפת סיסמה</div>
+      <div id="passwordError" class="alert alert-error modal-error hidden"></div>
+      <form id="passwordForm">
+        <label class="field"><span>הסיסמה הנוכחית</span><input id="pwOld" type="password" autocomplete="current-password" required></label>
+        <label class="field"><span>סיסמה חדשה (לפחות 6 תווים)</span><input id="pwNew" type="password" autocomplete="new-password" required minlength="6"></label>
+        <div class="user-form-actions">
+          <button class="btn btn-primary" type="submit">שמור</button>
+          <button class="btn btn-secondary" type="button" id="pwCancel">ביטול</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="sourcePopup" class="source-popup hidden" role="dialog" aria-hidden="true"></div>
+
+  <!-- Package-count popup for address book -->
+  <div id="abPkgPopup" class="hidden" role="dialog" aria-modal="true"
+    style="position:fixed;z-index:4000;background:#fff;border:1px solid var(--border);
+           border-radius:10px;box-shadow:0 8px 32px rgba(26,43,74,0.22);
+           padding:18px 22px;min-width:210px;direction:rtl;">
+    <div style="font-weight:700;color:var(--navy);font-size:1rem;margin-bottom:14px;">כמה קרטונים?</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="number" id="abPkgInput" value="1" min="1" max="999"
+        style="width:70px;padding:8px 10px;border:2px solid var(--border);border-radius:6px;
+               font-size:1.15rem;font-weight:700;text-align:center;font-family:inherit;
+               color:var(--navy);outline:none;transition:border 0.15s;">
+      <button id="abPkgConfirm" class="btn btn-success" type="button" style="padding:9px 18px;">✓ אשר</button>
+      <button id="abPkgCancel"  class="btn btn-secondary" type="button" style="padding:9px 12px;">✕</button>
+    </div>
+  </div>
+
+  <script src="delivery-cities-cache.js"></script>
+  <script>
+    const DELIVERY_COLUMNS = [
+      'מזהה הזמנה', 'אימייל', 'שם פרטי', 'שם משפחה', 'טלפון',
+      'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח',
+      'מספר חבילות', 'הערות מיקום', 'מספר משטחים', 'מספר מסמך',
+      'עמודה ישנה', 'גוביינא', 'מיקוד', 'טלפון יעד 2', 'ברכה'
+    ];
+
+    const PREVIEW_DELIVERY_DAYS_COL = 'ימי עסקים';
+    const deliveryDaysMemoryCache = {};
+
+    // ---------- server ----------
+    // The same Supabase project as מכירות מול החזרות; everything here goes through the dlv_* functions
+    // (see הגדרת-מסד-נתונים-משלוחים.sql). The key is the public one; the session token is what lets a call in.
+    const SUPA_URL = 'https://iwatwpcemndhjysghzil.supabase.co';
+    const SUPA_KEY = 'sb_publishable_4boIKxcwLdps6bgEtCDMAw_IcK7Ekev';
+    let authToken = null;
+
+    async function rpc(fn, args) {
+      let res;
+      try {
+        res = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, {
+          method: 'POST',
+          headers: { apikey: SUPA_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify(args || {})
+        });
+      } catch (e) {
+        throw { code: 'NETWORK' };
+      }
+      const text = await res.text();
+      let data = null;
+      try { data = text ? JSON.parse(text) : null; } catch (e) {}
+      if (!res.ok) {
+        throw { code: String((data && data.message) || 'SERVER').split(' ')[0], status: res.status };
+      }
+      return data;
+    }
+
+    function getPreviewColumns() {
+      const cols = [];
+      DELIVERY_COLUMNS.forEach(function(col) {
+        cols.push(col);
+        if (col === 'עיר') cols.push(PREVIEW_DELIVERY_DAYS_COL);
+      });
+      return cols;
+    }
+
+    const CITY_TYPE_PREFIXES = [
+      'מושב', 'מושבה', 'כפר', 'קיבוץ', 'ישוב', 'עיר', 'שכונת', 'אזור', 'הישוב'
+    ];
+
+    function normalizeCityName(city) {
+      return String(city || '')
+        .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '')
+        .replace(/[\u00a0\u2007\u202f]/g, ' ')
+        .replace(/[,،;|].*$/, '')
+        .replace(/[-–—]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function stripCityPrefixes(name) {
+      let result = normalizeCityName(name);
+      let previous = '';
+      while (result !== previous) {
+        previous = result;
+        CITY_TYPE_PREFIXES.forEach(function(prefix) {
+          const withSpace = prefix + ' ';
+          if (result.indexOf(withSpace) === 0) {
+            result = result.slice(withSpace.length).trim();
+          }
+        });
+      }
+      return result;
+    }
+
+    function addCityVariant(variants, name) {
+      const value = normalizeCityName(name);
+      if (value && variants.indexOf(value) < 0) variants.push(value);
+    }
+
+    // basicOnly: skip the spelling variants (used for API queries to keep requests few)
+    function getCityLookupVariants(city, basicOnly) {
+      const normalized = normalizeCityName(city);
+      const stripped = stripCityPrefixes(normalized);
+      const variants = [];
+      
+      // קיצורים נפוצים
+      const abbreviations = {
+        'ת"א': 'תל אביב',
+        'תא': 'תל אביב',
+        'י-ם': 'ירושלים',
+        'ים': 'ירושלים',
+        'פ"ת': 'פתח תקווה',
+        'פת': 'פתח תקווה',
+        'ראשל"צ': 'ראשון לציון',
+        'ראשלצ': 'ראשון לציון',
+        'ב"ש': 'באר שבע',
+        'בש': 'באר שבע',
+        'כ"ס': 'כפר סבא',
+        'כס': 'כפר סבא',
+        'ר"ג': 'רמת גן',
+        'רג': 'רמת גן',
+        'נתב"ג': 'נמל תעופה בן גוריון',
+        'נתבג': 'נמל תעופה בן גוריון'
+      };
+      
+      if (abbreviations[normalized]) {
+        addCityVariant(variants, abbreviations[normalized]);
+      }
+      
+      addCityVariant(variants, normalized);
+      if (stripped && stripped !== normalized) addCityVariant(variants, stripped);
+
+      variants.slice().forEach(function(name) {
+        if (name.indexOf('קרית ') === 0) {
+          addCityVariant(variants, 'קריית ' + name.slice(5));
+        } else if (name.indexOf('קריית ') === 0) {
+          addCityVariant(variants, 'קרית ' + name.slice(6));
+        }
+        if (name.indexOf(' ') >= 0) {
+          addCityVariant(variants, name.replace(/ /g, '-'));
+        }
+        if (name.indexOf('-') >= 0) {
+          addCityVariant(variants, name.replace(/-/g, ' '));
+        }
+        if (basicOnly) return;
+
+        // וריאציות כתיב נפוצות (ו/וו, י/יי, ה/א בסוף מילה)
+        if (name.indexOf('וו') >= 0) {
+          addCityVariant(variants, name.replace(/וו/g, 'ו'));
+        }
+        if (name.indexOf('ו') >= 0 && name.indexOf('וו') < 0) {
+          addCityVariant(variants, name.replace(/ו/g, 'וו'));
+        }
+        if (name.indexOf('יי') >= 0) {
+          addCityVariant(variants, name.replace(/יי/g, 'י'));
+        }
+        if (name.indexOf('י') >= 0 && name.indexOf('יי') < 0) {
+          addCityVariant(variants, name.replace(/י/g, 'יי'));
+        }
+        if (name.endsWith('ה')) {
+          addCityVariant(variants, name.slice(0, -1) + 'א');
+        }
+        if (name.endsWith('א')) {
+          addCityVariant(variants, name.slice(0, -1) + 'ה');
+        }
+      });
+
+      return variants;
+    }
+
+    function lookupDeliveryDaysFromCache(city) {
+      const normalized = normalizeCityName(city);
+      if (!normalized) return null;
+      if (deliveryDaysMemoryCache[normalized] !== undefined) {
+        return deliveryDaysMemoryCache[normalized];
+      }
+
+      const cache = window.DELIVERY_CITIES_CACHE || {};
+      const variants = getCityLookupVariants(normalized);
+
+      for (let i = 0; i < variants.length; i++) {
+        const variant = variants[i];
+        if (cache[variant] !== undefined) {
+          deliveryDaysMemoryCache[normalized] = cache[variant];
+          return cache[variant];
+        }
+        const quoteVariant = variant.replace(/[''׳]/g, "'").replace(/"/g, '');
+        if (quoteVariant !== variant && cache[quoteVariant] !== undefined) {
+          deliveryDaysMemoryCache[normalized] = cache[quoteVariant];
+          return cache[quoteVariant];
+        }
+      }
+
+      for (let v = 0; v < variants.length; v++) {
+        const candidate = variants[v];
+        let bestKey = null;
+        let bestLen = 0;
+        Object.keys(cache).forEach(function(key) {
+          if (candidate === key && key.length > bestLen) {
+            bestKey = key;
+            bestLen = key.length;
+            return;
+          }
+          if (key.length >= 3 && (candidate.endsWith(' ' + key) || candidate.endsWith(key))) {
+            const boundaryOk = candidate.length === key.length ||
+              candidate.charAt(candidate.length - key.length - 1) === ' ';
+            if (boundaryOk && key.length > bestLen) {
+              bestKey = key;
+              bestLen = key.length;
+            }
+          }
+        });
+        if (bestKey !== null) {
+          deliveryDaysMemoryCache[normalized] = cache[bestKey];
+          return cache[bestKey];
+        }
+      }
+
+      // חיפוש חכם שמתעלם מרווחים, מקפים, ואותיות אהוי (ו, י) כדי להתגבר על שגיאות כתיב
+      function simplify(s) { 
+        return s.replace(/[ \-וי]/g, '')
+                .replace(/ט/g, 'ת')
+                .replace(/ק/g, 'כ')
+                .replace(/ע/g, 'א')
+                .replace(/ס/g, 'ש')
+                .replace(/ם/g, 'מ')
+                .replace(/ן/g, 'נ')
+                .replace(/ץ/g, 'צ')
+                .replace(/ף/g, 'פ')
+                .replace(/ך/g, 'כ'); 
+      }
+      for (let v = 0; v < variants.length; v++) {
+        const candidateSimple = simplify(variants[v]);
+        if (candidateSimple.length < 3) continue;
+        
+        let bestKey = null;
+        let bestLen = 0;
+        Object.keys(cache).forEach(function(key) {
+          const keySimple = simplify(key);
+          if (candidateSimple === keySimple && key.length > bestLen) {
+            bestKey = key;
+            bestLen = key.length;
+          }
+        });
+        if (bestKey !== null) {
+          deliveryDaysMemoryCache[normalized] = cache[bestKey];
+          return cache[bestKey];
+        }
+      }
+
+      return null;
+    }
+
+    const MAX_API_QUERIES_PER_CITY = 4;
+    const deliveryDaysApiMisses = {};
+    const deliveryDaysApiPending = {};
+
+    function fetchDeliveryDaysFromApi(city) {
+      const normalized = normalizeCityName(city);
+      if (!normalized || deliveryDaysApiMisses[normalized]) return Promise.resolve(null);
+      if (deliveryDaysApiPending[normalized]) return deliveryDaysApiPending[normalized];
+
+      if (!authToken) return Promise.resolve(null);
+
+      // The server asks the delivery-check site (the browser may not read its answers) and keeps
+      // what it finds for everyone.
+      const queries = getCityLookupVariants(normalized, true).slice(0, MAX_API_QUERIES_PER_CITY);
+      const lookup = rpc('dlv_city_lookup', { p_token: authToken, p_city: normalized, p_queries: queries })
+        .then(function(found) {
+          if (!found || found.days === null || found.days === undefined) return null;
+          deliveryDaysMemoryCache[normalized] = found.days;
+          if (window.DELIVERY_CITIES_CACHE) {
+            window.DELIVERY_CITIES_CACHE[normalizeCityName(found.name)] = found.days;
+          }
+          return found.days;
+        })
+        .catch(function() { return null; });
+
+      deliveryDaysApiPending[normalized] = lookup.then(function(days) {
+        delete deliveryDaysApiPending[normalized];
+        if (days === null) deliveryDaysApiMisses[normalized] = true;
+        return days;
+      });
+      return deliveryDaysApiPending[normalized];
+    }
+
+    function resolveDeliveryDays(city) {
+      const cached = lookupDeliveryDaysFromCache(city);
+      if (cached !== null) return Promise.resolve(cached);
+      return fetchDeliveryDaysFromApi(city);
+    }
+
+    function escapeHtmlForDelivery(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function formatDeliveryDaysBadge(days) {
+      if (days === null || days === undefined || days === '') {
+        return '<span class="days-badge days-unknown" title="לא נמצא במאגר">?</span>';
+      }
+      const num = Number(days);
+      const cls = num <= 3 ? 'days-regular' : 'days-extended';
+      const title = num <= 3 ? 'יעד רגיל — עד 3 ימי הפצה' : 'יעד חריג — עד 7 ימי הפצה';
+      return '<span class="days-badge ' + cls + '" title="' + escapeHtmlForDelivery(title) + '">' + escapeHtmlForDelivery(String(num)) + '</span>';
+    }
+
+    function setDeliveryDaysCellContent(cell, days, loading) {
+      if (loading) {
+        cell.innerHTML = '<span class="days-loading">...</span>';
+        return;
+      }
+      cell.innerHTML = formatDeliveryDaysBadge(days);
+    }
+
+    function updateRowDeliveryDays(rowIndex, city) {
+      const cell = document.querySelector(
+        '#previewBody td[data-column="' + PREVIEW_DELIVERY_DAYS_COL + '"][data-row-index="' + rowIndex + '"]'
+      );
+      if (!cell) return;
+
+      const normalized = normalizeCityName(city);
+      if (!normalized) {
+        setDeliveryDaysCellContent(cell, null, false);
+        return;
+      }
+
+      const cached = lookupDeliveryDaysFromCache(normalized);
+      if (cached !== null) {
+        setDeliveryDaysCellContent(cell, cached, false);
+        return;
+      }
+
+      setDeliveryDaysCellContent(cell, null, true);
+      resolveDeliveryDays(normalized).then(function(days) {
+        if (!cell.isConnected) return;
+        const cityInput = document.querySelector(
+          '#previewBody .preview-input[data-row-index="' + rowIndex + '"][data-column="עיר"]'
+        );
+        if (cityInput && normalizeCityName(cityInput.value) !== normalized) return;
+        setDeliveryDaysCellContent(cell, days, false);
+      });
+    }
+
+    function refreshAllDeliveryDays(rows) {
+      rows.forEach(function(row, rowIndex) {
+        updateRowDeliveryDays(rowIndex, row['עיר']);
+      });
+    }
+
+    const FIELD_DEFINITIONS = [
+      { key: 'orderId', label: 'מזהה הזמנה', deliveryTargets: ['מזהה הזמנה'], sourceNames: ['הזמנה'] },
+      { key: 'customerName', label: 'שם פרטי', deliveryTargets: ['שם פרטי'], sourceNames: ['שם לקוח'] },
+      { key: 'phone', label: 'טלפון', deliveryTargets: ['טלפון'], sourceNames: ['טלפון', 'מספר טלפון'] },
+      { key: 'cityAlt', label: 'עיר - כתובת', deliveryTargets: ['עיר'], sourceNames: ['עיר - כתובת'] },
+      { key: 'city', label: 'עיר (גיבוי)', deliveryTargets: ['עיר'], sourceNames: ['עיר'], excludePatterns: ['כתובת'], hidden: true },
+      { key: 'streetAlt', label: 'רחוב - כתובת', deliveryTargets: ['רחוב'], sourceNames: ['רחוב - כתובת'] },
+      { key: 'street', label: 'רחוב (גיבוי)', deliveryTargets: ['רחוב'], sourceNames: ['רחוב'], excludePatterns: ['כתובת'], hidden: true },
+      { key: 'houseArea', label: 'אזור / שכונה - כתובת', deliveryTargets: ['מספר בית'], sourceNames: ['אזור / שכונה - כתובת'] },
+      { key: 'houseNum', label: 'מספר בנין (גיבוי)', deliveryTargets: ['מספר בית'], sourceNames: ['מספר בנין', 'מספר בית', 'בית'], hidden: true }
+    ];
+
+    function normalizeHeader(value) {
+      return String(value || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function findColumnByHeader(headers, names, excludePatterns) {
+      const normalizedHeaders = headers.map(normalizeHeader);
+      const wanted = names.map(normalizeHeader);
+
+      for (let i = 0; i < normalizedHeaders.length; i++) {
+        const header = normalizedHeaders[i];
+        if (!header) continue;
+        if (excludePatterns && excludePatterns.some(function(pattern) { return header.indexOf(pattern) >= 0; })) {
+          continue;
+        }
+        if (wanted.indexOf(header) >= 0) {
+          return i;
+        }
+      }
+      return -1;
+    }
+
+    function buildAutoColumnMap(headers) {
+      const map = {};
+      FIELD_DEFINITIONS.forEach(function(def) {
+        const index = findColumnByHeader(headers, def.sourceNames, def.excludePatterns);
+        if (index >= 0) {
+          map[def.key] = index;
+        }
+      });
+      return map;
+    }
+
+    const DEFAULT_SETTINGS = {
+      packageCount: '1',
+      palletCount: '',
+      locationNotes: '',
+      greeting: ''
+    };
+
+    function readFileAsArrayBuffer(file) {
+      return new Promise(function(resolve, reject) {
+        const reader = new FileReader();
+        reader.onload = function(e) { resolve(e.target.result); };
+        reader.onerror = function() { reject(new Error('שגיאה בקריאת הקובץ')); };
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function sheetToRows(workbook) {
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      const rawRows = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
+      if (rawRows.length === 0) throw new Error('הקובץ ריק מנתונים');
+      return { headers: rawRows[0], dataRows: rawRows.slice(1) };
+    }
+
+    function cellValue(row, index) {
+      if (index === undefined || index < 0) return '';
+      return String(row[index] || '').trim();
+    }
+
+    function firstValue(row, indexes) {
+      for (let i = 0; i < indexes.length; i++) {
+        const value = cellValue(row, indexes[i]);
+        if (value) return value;
+      }
+      return '';
+    }
+
+    function getSourceHeader(headers, index) {
+      if (index === undefined || index < 0) return null;
+      const header = normalizeHeader(headers[index]);
+      return header || ('עמודה ' + (index + 1));
+    }
+
+    function firstValueWithSource(row, sourceKeys, manualMap, headers) {
+      for (let i = 0; i < sourceKeys.length; i++) {
+        const key = sourceKeys[i];
+        const idx = manualMap[key];
+        const value = cellValue(row, idx);
+        if (value) {
+          return {
+            value: value,
+            header: getSourceHeader(headers, idx),
+            rawValue: value
+          };
+        }
+      }
+      return { value: '', header: null, rawValue: '' };
+    }
+
+    function makeSourceInfo(header, rawValue, note) {
+      return {
+        header: header || 'לא נמצא',
+        rawValue: rawValue || '',
+        note: note || ''
+      };
+    }
+
+    function isNumericHouseValue(text) {
+      return /^[\d\s\/\\.,\-]+$/.test(text) && /\d/.test(text);
+    }
+
+    function splitHouseNumber(value) {
+      const text = String(value || '').trim();
+      if (!text) return { houseNum: '', deliveryNotes: '' };
+      if (isNumericHouseValue(text)) {
+        return { houseNum: text, deliveryNotes: '' };
+      }
+      return { houseNum: '', deliveryNotes: text };
+    }
+
+    function convert(parsedData, manualMap, settings) {
+      const rows = [];
+      const rowSources = [];
+      const skipped = [];
+      const headers = parsedData.headers;
+
+      parsedData.dataRows.forEach(function(rawRow, index) {
+        const orderId = cellValue(rawRow, manualMap.orderId);
+        const customerName = cellValue(rawRow, manualMap.customerName);
+
+        if (rawRow.length === 0 || (!orderId && !customerName)) {
+          skipped.push({ rowNum: index + 2, reason: 'שורה ריקה' });
+          return;
+        }
+
+        const deliveryRow = {};
+        const sources = {};
+
+        deliveryRow['מזהה הזמנה'] = orderId;
+        sources['מזהה הזמנה'] = makeSourceInfo(
+          getSourceHeader(headers, manualMap.orderId),
+          orderId
+        );
+
+        deliveryRow['אימייל'] = '';
+        sources['אימייל'] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
+
+        deliveryRow['שם פרטי'] = customerName;
+        sources['שם פרטי'] = makeSourceInfo(
+          getSourceHeader(headers, manualMap.customerName),
+          customerName
+        );
+
+        deliveryRow['שם משפחה'] = '';
+        sources['שם משפחה'] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
+
+        const phoneValue = cellValue(rawRow, manualMap.phone);
+        deliveryRow['טלפון'] = phoneValue;
+        sources['טלפון'] = makeSourceInfo(
+          getSourceHeader(headers, manualMap.phone),
+          phoneValue
+        );
+
+        const cityResult = firstValueWithSource(rawRow, ['cityAlt', 'city'], manualMap, headers);
+        deliveryRow['עיר'] = cityResult.value;
+        sources['עיר'] = makeSourceInfo(
+          cityResult.header,
+          cityResult.rawValue,
+          cityResult.header ? '' : 'לא נמצא בפריוריטי'
+        );
+
+        const streetResult = firstValueWithSource(rawRow, ['streetAlt', 'street'], manualMap, headers);
+        deliveryRow['רחוב'] = streetResult.value;
+        sources['רחוב'] = makeSourceInfo(
+          streetResult.header,
+          streetResult.rawValue,
+          streetResult.header ? '' : 'לא נמצא בפריוריטי'
+        );
+
+        const houseRaw = firstValueWithSource(rawRow, ['houseArea', 'houseNum'], manualMap, headers);
+        const houseSplit = splitHouseNumber(houseRaw.value);
+        deliveryRow['מספר בית'] = houseSplit.houseNum;
+        deliveryRow['הערות משלוח'] = houseSplit.deliveryNotes;
+
+        if (houseSplit.deliveryNotes) {
+          sources['הערות משלוח'] = makeSourceInfo(
+            houseRaw.header,
+            houseRaw.rawValue,
+            'טקסט (לא מספר) הועבר ממספר בית להערות משלוח'
+          );
+          sources['מספר בית'] = makeSourceInfo(null, '', 'ריק — הערך הועבר להערות משלוח');
+        } else {
+          sources['מספר בית'] = makeSourceInfo(
+            houseRaw.header,
+            houseSplit.houseNum,
+            houseRaw.header ? '' : 'לא נמצא בפריוריטי'
+          );
+          sources['הערות משלוח'] = makeSourceInfo(null, '', 'ריק');
+        }
+
+        deliveryRow['מספר חבילות'] = settings.packageCount;
+        sources['מספר חבילות'] = makeSourceInfo('ברירת מחדל', settings.packageCount);
+
+        deliveryRow['מספר משטחים'] = settings.palletCount;
+        sources['מספר משטחים'] = settings.palletCount
+          ? makeSourceInfo('ברירת מחדל', settings.palletCount)
+          : makeSourceInfo(null, '', 'ריק');
+
+        deliveryRow['הערות מיקום'] = settings.locationNotes;
+        sources['הערות מיקום'] = settings.locationNotes
+          ? makeSourceInfo('ברירת מחדל', settings.locationNotes)
+          : makeSourceInfo(null, '', 'ריק');
+
+        deliveryRow['ברכה'] = settings.greeting;
+        sources['ברכה'] = settings.greeting
+          ? makeSourceInfo('ברירת מחדל', settings.greeting)
+          : makeSourceInfo(null, '', 'ריק');
+
+        ['קומה', 'דירה', 'מספר מסמך', 'עמודה ישנה', 'גוביינא', 'מיקוד', 'טלפון יעד 2'].forEach(function(col) {
+          deliveryRow[col] = '';
+          sources[col] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
+        });
+
+        rows.push(deliveryRow);
+        rowSources.push(sources);
+      });
+
+      return {
+        totalInputRows: parsedData.dataRows.length,
+        rows: rows,
+        rowSources: rowSources,
+        skipped: skipped
+      };
+    }
+
+    (function() {
+      'use strict';
+
+      let currentFile = null;
+      let parsedData = null;
+      let convertResult = null;
+      let currentColumnMap = {};
+      let showAllPreviewColumns = false;
+      let rowSelectMode = false;
+      let sourceCheckMode = false;
+      let tagMode = false;
+      let me = null;
+
+      const fileInput = document.getElementById('fileInput');
+      const uploadZone = document.getElementById('uploadZone');
+      const fileNameEl = document.getElementById('fileName');
+      const alertBox = document.getElementById('alertBox');
+      const resultCard = document.getElementById('resultCard');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const toggleColumnsBtn = document.getElementById('toggleColumnsBtn');
+      const deleteRowsBtn = document.getElementById('deleteRowsBtn');
+      const confirmDeleteRowsBtn = document.getElementById('confirmDeleteRowsBtn');
+      const cancelDeleteRowsBtn = document.getElementById('cancelDeleteRowsBtn');
+      const selectedRowsCount = document.getElementById('selectedRowsCount');
+      const sourceCheckBtn = document.getElementById('sourceCheckBtn');
+      const sourcePopup = document.getElementById('sourcePopup');
+      const tagRowsBtn = document.getElementById('tagRowsBtn');
+      const tagFragileBtn = document.getElementById('tagFragileBtn');
+      const tagChocolateBtn = document.getElementById('tagChocolateBtn');
+      const cancelTagRowsBtn = document.getElementById('cancelTagRowsBtn');
+      const tagRowsCount = document.getElementById('tagRowsCount');
+
+      function showAlert(message, type) {
+        alertBox.className = 'alert alert-' + (type || 'info');
+        alertBox.textContent = message;
+        alertBox.classList.remove('hidden');
+      }
+
+      function hideAlert() { alertBox.classList.add('hidden'); }
+
+      let previewMeasureEl = null;
+
+      function getPreviewMeasureEl() {
+        if (!previewMeasureEl) {
+          previewMeasureEl = document.createElement('span');
+          previewMeasureEl.className = 'preview-measure';
+          document.body.appendChild(previewMeasureEl);
+        }
+        return previewMeasureEl;
+      }
+
+      function measurePreviewText(text) {
+        const el = getPreviewMeasureEl();
+        el.textContent = String(text || '').length ? String(text) : ' ';
+        return el.getBoundingClientRect().width;
+      }
+
+      function getPreviewCharCount(text) {
+        return String(text || '').length;
+      }
+
+      function fitPreviewInput(input, headerText) {
+        const valueWidth = measurePreviewText(input.value);
+        const headerWidth = measurePreviewText(headerText);
+        const targetWidth = Math.ceil(Math.max(valueWidth, headerWidth)) + 24;
+        const charCount = Math.max(
+          getPreviewCharCount(input.value),
+          getPreviewCharCount(headerText),
+          3
+        ) + 1;
+
+        input.size = charCount;
+        input.style.width = targetWidth + 'px';
+        input.style.minWidth = targetWidth + 'px';
+      }
+
+      function getEmptyPreviewColumns(rows) {
+        return DELIVERY_COLUMNS.filter(function(col) {
+          return rows.every(function(row) {
+            return !String(row[col] || '').trim();
+          });
+        });
+      }
+
+      function applyPreviewColumnVisibility() {
+        if (!convertResult) return;
+
+        const emptyCols = getEmptyPreviewColumns(convertResult.rows);
+        const hasHidden = emptyCols.length > 0;
+
+        if (toggleColumnsBtn) {
+          toggleColumnsBtn.classList.toggle('hidden', !hasHidden);
+          toggleColumnsBtn.innerHTML = showAllPreviewColumns ? '👁️ הסתר עמודות ריקות' : '👁️ הצג הכל';
+        }
+
+        DELIVERY_COLUMNS.forEach(function(col) {
+          const hidden = !showAllPreviewColumns && emptyCols.indexOf(col) >= 0;
+          document.querySelectorAll('[data-column="' + col + '"]').forEach(function(el) {
+            el.classList.toggle('preview-col-hidden', hidden);
+          });
+        });
+
+        schedulePreviewColumnFit();
+      }
+
+      function fitPreviewColumn(colName) {
+        const table = document.getElementById('previewTable');
+        if (!table) return;
+
+        const headCell = table.querySelector('thead th[data-column="' + colName + '"]');
+        if (!headCell || headCell.classList.contains('preview-col-hidden')) return;
+
+        const headerText = headCell.textContent;
+        const inputs = table.querySelectorAll(
+          'tbody td[data-column="' + colName + '"] .preview-input'
+        );
+
+        let maxWidth = measurePreviewText(headerText);
+        inputs.forEach(function(input) {
+          fitPreviewInput(input, headerText);
+          maxWidth = Math.max(maxWidth, input.offsetWidth || measurePreviewText(input.value));
+        });
+
+        const columnWidth = Math.ceil(maxWidth) + 20;
+        table.querySelectorAll(
+          'thead th[data-column="' + colName + '"], tbody td[data-column="' + colName + '"]'
+        ).forEach(function(cell) {
+          cell.style.minWidth = columnWidth + 'px';
+          cell.style.width = columnWidth + 'px';
+        });
+      }
+
+      function fitPreviewColumns() {
+        DELIVERY_COLUMNS.forEach(function(col) {
+          fitPreviewColumn(col);
+        });
+      }
+
+      function schedulePreviewColumnFit() {
+        requestAnimationFrame(function() {
+          fitPreviewColumns();
+          requestAnimationFrame(fitPreviewColumns);
+        });
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(fitPreviewColumns);
+        }
+      }
+
+      function hideSourcePopup() {
+        sourcePopup.classList.add('hidden');
+        sourcePopup.setAttribute('aria-hidden', 'true');
+      }
+
+      function showSourcePopup(inputEl) {
+        if (!convertResult || !convertResult.rowSources) return;
+
+        const rowIndex = parseInt(inputEl.dataset.rowIndex, 10);
+        const col = inputEl.dataset.column;
+        if (isNaN(rowIndex) || !col) return;
+
+        const sourceInfo = convertResult.rowSources[rowIndex] && convertResult.rowSources[rowIndex][col];
+        if (!sourceInfo) return;
+
+        const rect = inputEl.getBoundingClientRect();
+        let top = rect.bottom + 8;
+        let left = rect.left;
+
+        sourcePopup.innerHTML =
+          '<div class="source-popup-title">' + escapeHtml(col) + '</div>' +
+          '<div class="source-popup-row"><span class="source-popup-label">מקור בפריוריטי: </span>' +
+          '<span class="source-popup-value">' + escapeHtml(sourceInfo.header) + '</span></div>' +
+          (sourceInfo.rawValue
+            ? '<div class="source-popup-row"><span class="source-popup-label">ערך בפריוריטי: </span>' +
+              '<span class="source-popup-value">' + escapeHtml(sourceInfo.rawValue) + '</span></div>'
+            : '') +
+          (sourceInfo.note
+            ? '<div class="source-popup-row"><span class="source-popup-label">הערה: </span>' +
+              '<span class="source-popup-value">' + escapeHtml(sourceInfo.note) + '</span></div>'
+            : '') +
+          '<button type="button" class="source-popup-close">סגור</button>';
+
+        sourcePopup.classList.remove('hidden');
+        sourcePopup.setAttribute('aria-hidden', 'false');
+
+        sourcePopup.style.top = top + 'px';
+        sourcePopup.style.left = left + 'px';
+
+        const popupRect = sourcePopup.getBoundingClientRect();
+        if (popupRect.right > window.innerWidth - 12) {
+          sourcePopup.style.left = Math.max(12, window.innerWidth - popupRect.width - 12) + 'px';
+        }
+        if (popupRect.bottom > window.innerHeight - 12) {
+          sourcePopup.style.top = Math.max(12, rect.top - popupRect.height - 8) + 'px';
+        }
+
+        sourcePopup.querySelector('.source-popup-close').addEventListener('click', hideSourcePopup);
+      }
+
+      function updateSourceCheckUI() {
+        sourceCheckBtn.classList.toggle('active', sourceCheckMode);
+        sourceCheckBtn.innerHTML = sourceCheckMode ? '✅ סיום בדיקת מקור' : '🔍 בדיקת מקור שדה';
+        if (!sourceCheckMode) hideSourcePopup();
+      }
+
+      function toggleSourceCheckMode() {
+        if (rowSelectMode) exitRowSelectMode();
+        sourceCheckMode = !sourceCheckMode;
+        updateSourceCheckUI();
+        if (convertResult) renderPreview(convertResult.rows);
+        if (sourceCheckMode) {
+          showAlert('לחץ על משבצת כדי לראות מאיזו עמודה בפריוריטי נלקח הערך.', 'info');
+        }
+      }
+
+      function updateRowSelectUI() {
+        const anyMode = rowSelectMode || tagMode;
+        deleteRowsBtn.classList.toggle('hidden', anyMode);
+        tagRowsBtn.classList.toggle('hidden', anyMode);
+        sourceCheckBtn.classList.toggle('hidden', anyMode);
+        confirmDeleteRowsBtn.classList.toggle('hidden', !rowSelectMode);
+        cancelDeleteRowsBtn.classList.toggle('hidden', !rowSelectMode);
+        selectedRowsCount.classList.toggle('hidden', !rowSelectMode);
+        tagFragileBtn.classList.toggle('hidden', !tagMode);
+        tagChocolateBtn.classList.toggle('hidden', !tagMode);
+        cancelTagRowsBtn.classList.toggle('hidden', !tagMode);
+        tagRowsCount.classList.toggle('hidden', !tagMode);
+        if (rowSelectMode) updateSelectedRowsCount();
+        if (tagMode) updateTagRowsCount();
+      }
+
+      function updateTagRowsCount() {
+        const count = getSelectedRowIndexes().length;
+        tagRowsCount.textContent = count ? ('נבחרו ' + count + ' שורות') : 'סמן שורות לתיוג';
+        tagFragileBtn.disabled = count === 0;
+        tagChocolateBtn.disabled = count === 0;
+      }
+
+      function enterTagMode() {
+        syncPreviewEdits();
+        if (sourceCheckMode) { sourceCheckMode = false; updateSourceCheckUI(); }
+        if (rowSelectMode) exitRowSelectMode();
+        tagMode = true;
+        updateRowSelectUI();
+        if (convertResult) renderPreview(convertResult.rows);
+      }
+
+      function exitTagMode() {
+        tagMode = false;
+        updateRowSelectUI();
+        if (convertResult) renderPreview(convertResult.rows);
+      }
+
+      function applyTagToSelected(tagText) {
+        syncPreviewEdits();
+        if (!convertResult) return;
+        const indexes = getSelectedRowIndexes();
+        if (!indexes.length) return;
+        indexes.forEach(function(index) {
+          const row = convertResult.rows[index];
+          if (!row) return;
+          const current = String(row['הערות משלוח'] || '').trim();
+          row['הערות משלוח'] = current ? current + ' ' + tagText : tagText;
+        });
+        exitTagMode();
+        renderPreview(convertResult.rows);
+        showAlert('עודכנו ' + indexes.length + ' שורות עם "' + tagText + '".', 'success');
+      }
+
+      function getSelectedRowIndexes() {
+        const indexes = [];
+        document.querySelectorAll('#previewBody .row-select-checkbox:checked').forEach(function(cb) {
+          const index = parseInt(cb.dataset.rowIndex, 10);
+          if (!isNaN(index)) indexes.push(index);
+        });
+        return indexes.sort(function(a, b) { return a - b; });
+      }
+
+      function updateSelectedRowsCount() {
+        const count = rowSelectMode ? getSelectedRowIndexes().length : 0;
+        selectedRowsCount.textContent = count ? ('נבחרו ' + count + ' שורות') : 'סמן שורות למחיקה';
+        confirmDeleteRowsBtn.disabled = count === 0;
+      }
+
+      function enterRowSelectMode() {
+        syncPreviewEdits();
+        if (sourceCheckMode) { sourceCheckMode = false; updateSourceCheckUI(); }
+        if (tagMode) { tagMode = false; }
+        rowSelectMode = true;
+        updateRowSelectUI();
+        if (convertResult) renderPreview(convertResult.rows);
+      }
+
+      function exitRowSelectMode() {
+        rowSelectMode = false;
+        updateRowSelectUI();
+        if (convertResult) renderPreview(convertResult.rows);
+      }
+
+      function deleteSelectedRows() {
+        syncPreviewEdits();
+        if (!convertResult) return;
+
+        const indexes = getSelectedRowIndexes();
+        if (!indexes.length) return;
+
+        const message = indexes.length === 1
+          ? 'למחוק שורה אחת?'
+          : 'למחוק ' + indexes.length + ' שורות?';
+        if (!window.confirm(message)) return;
+
+        // Delete from the bottom up so earlier splices don't shift later indexes
+        indexes.slice().sort(function(a, b) { return b - a; }).forEach(function(index) {
+          convertResult.rows.splice(index, 1);
+          if (convertResult.rowSources) convertResult.rowSources.splice(index, 1);
+        });
+
+        document.getElementById('statOutput').textContent = convertResult.rows.length;
+        rowSelectMode = false;
+        updateRowSelectUI();
+        renderPreview(convertResult.rows);
+        showAlert('נמחקו ' + indexes.length + ' שורות. נשארו ' + convertResult.rows.length + ' משלוחים.', 'info');
+      }
+
+      function renderPreview(rows) {
+        const head = document.getElementById('previewHead');
+        const body = document.getElementById('previewBody');
+        const previewTitle = document.getElementById('previewTitle');
+
+        previewTitle.textContent = 'תצוגה מקדימה (' + rows.length + ' שורות)';
+
+        let headerHtml = '';
+        if (rowSelectMode || tagMode) {
+          headerHtml += '<th class="preview-select"><input type="checkbox" id="selectAllRows" title="בחר הכל"></th>';
+        }
+        headerHtml += getPreviewColumns().map(function(c) {
+          const thClass = c === PREVIEW_DELIVERY_DAYS_COL ? 'preview-delivery-days' : 'preview-editable';
+          return '<th class="' + thClass + '" data-column="' + escapeHtml(c) + '">' + escapeHtml(c) + '</th>';
+        }).join('');
+        head.innerHTML = '<tr>' + headerHtml + '</tr>';
+
+        const selectAllRows = document.getElementById('selectAllRows');
+        if (selectAllRows) {
+          selectAllRows.addEventListener('change', function() {
+            document.querySelectorAll('#previewBody .row-select-checkbox').forEach(function(cb) {
+              cb.checked = selectAllRows.checked;
+            });
+            if (rowSelectMode) updateSelectedRowsCount();
+            if (tagMode) updateTagRowsCount();
+          });
+        }
+
+        body.innerHTML = '';
+        rows.forEach(function(row, rowIndex) {
+          const tr = document.createElement('tr');
+
+          if (rowSelectMode || tagMode) {
+            const selectTd = document.createElement('td');
+            selectTd.className = 'preview-select';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'row-select-checkbox';
+            checkbox.dataset.rowIndex = String(rowIndex);
+            checkbox.addEventListener('change', function() {
+              if (rowSelectMode) updateSelectedRowsCount();
+              if (tagMode) updateTagRowsCount();
+            });
+            selectTd.appendChild(checkbox);
+            tr.appendChild(selectTd);
+          }
+
+          getPreviewColumns().forEach(function(col) {
+            if (col === PREVIEW_DELIVERY_DAYS_COL) {
+              const daysTd = document.createElement('td');
+              daysTd.className = 'preview-delivery-days';
+              daysTd.dataset.column = PREVIEW_DELIVERY_DAYS_COL;
+              daysTd.dataset.rowIndex = String(rowIndex);
+              setDeliveryDaysCellContent(daysTd, lookupDeliveryDaysFromCache(row['עיר']), false);
+              tr.appendChild(daysTd);
+              return;
+            }
+
+            const td = document.createElement('td');
+            td.className = 'preview-editable';
+            td.dataset.column = col;
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'preview-input' + (sourceCheckMode ? ' source-check-mode' : '');
+            input.value = row[col] || '';
+            input.readOnly = sourceCheckMode;
+            input.dataset.rowIndex = String(rowIndex);
+            input.dataset.column = col;
+            if (sourceCheckMode) {
+              input.addEventListener('click', function(e) {
+                e.preventDefault();
+                showSourcePopup(input);
+              });
+            } else {
+              input.addEventListener('input', function() {
+                if (convertResult && convertResult.rows[rowIndex]) {
+                  convertResult.rows[rowIndex][col] = input.value;
+                }
+                if (col === 'עיר') {
+                  updateRowDeliveryDays(rowIndex, input.value);
+                }
+                fitPreviewColumn(col);
+                applyPreviewColumnVisibility();
+              });
+            }
+            td.appendChild(input);
+            tr.appendChild(td);
+          });
+
+          body.appendChild(tr);
+        });
+
+        applyPreviewColumnVisibility();
+        refreshAllDeliveryDays(rows);
+      }
+
+      function escapeHtml(str) {
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function syncPreviewEdits() {
+        if (!convertResult) return;
+        document.querySelectorAll('#previewBody .preview-input').forEach(function(input) {
+          const rowIndex = parseInt(input.dataset.rowIndex, 10);
+          const col = input.dataset.column;
+          if (!isNaN(rowIndex) && col && convertResult.rows[rowIndex]) {
+            convertResult.rows[rowIndex][col] = input.value;
+          }
+        });
+      }
+
+      function buildDownloadFileName() {
+        const now = new Date();
+        const stamp = now.getFullYear() +
+          String(now.getMonth() + 1).padStart(2, '0') +
+          String(now.getDate()).padStart(2, '0') + '-' +
+          String(now.getHours()).padStart(2, '0') +
+          String(now.getMinutes()).padStart(2, '0');
+        return 'mishlohim-' + stamp + '.xlsx';
+      }
+
+      function triggerBlobDownload(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      }
+
+      const companyPickerModal = document.getElementById('companyPickerModal');
+      const pickIzkovitch = document.getElementById('pickIzkovitch');
+      const pickShipnest = document.getElementById('pickShipnest');
+      const cancelCompanyPicker = document.getElementById('cancelCompanyPicker');
+
+      function showCompanyPicker() {
+        companyPickerModal.classList.remove('hidden');
+      }
+
+      function hideCompanyPicker() {
+        companyPickerModal.classList.add('hidden');
+      }
+
+      function openCompanyAndClose(url, label) {
+        hideCompanyPicker();
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showAlert('הקובץ הורד בהצלחה. נפתח אתר ' + label + ' לייבוא.', 'success');
+      }
+
+      pickIzkovitch.addEventListener('click', function() {
+        openCompanyAndClose('https://members.lionwheel.com/company/import', 'Lionwheel (איצקוביץ)');
+      });
+
+      pickShipnest.addEventListener('click', function() {
+        openCompanyAndClose('https://shipnest.io/portal/shipments/import', 'ShipNest (שיפינג)');
+      });
+
+      cancelCompanyPicker.addEventListener('click', hideCompanyPicker);
+
+      companyPickerModal.addEventListener('click', function(e) {
+        if (e.target === companyPickerModal) hideCompanyPicker();
+      });
+
+      function downloadConvertedFile() {
+        if (typeof XLSX === 'undefined') {
+          showAlert('ספריית האקסל לא נטענה. בדוק חיבור לאינטרנט ורענן את הדף.', 'error');
+          return;
+        }
+
+        if (!convertResult || !convertResult.rows.length) {
+          showAlert('אין נתונים להורדה. העלה קובץ פריוריטי קודם.', 'error');
+          return;
+        }
+
+        try {
+          syncPreviewEdits();
+
+          const ws = XLSX.utils.json_to_sheet(convertResult.rows, { header: DELIVERY_COLUMNS });
+          const wb = XLSX.utils.book_new();
+          XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
+
+          const fileName = buildDownloadFileName();
+          const arrayBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+          const blob = new Blob([arrayBuffer], {
+            type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          });
+
+          triggerBlobDownload(blob, fileName);
+          showCompanyPicker();
+        } catch (err) {
+          showAlert('שגיאה בהורדה: ' + (err.message || 'לא ידוע'), 'error');
+        }
+      }
+
+      function runConversion() {
+        if (!parsedData) return;
+        try {
+          hideAlert();
+          showAllPreviewColumns = false;
+          rowSelectMode = false;
+          tagMode = false;
+          sourceCheckMode = false;
+          updateRowSelectUI();
+          updateSourceCheckUI();
+          hideSourcePopup();
+          convertResult = convert(parsedData, currentColumnMap, DEFAULT_SETTINGS);
+
+          document.getElementById('statInput').textContent = convertResult.totalInputRows;
+          document.getElementById('statOutput').textContent = convertResult.rows.length;
+          document.getElementById('statSkipped').textContent = convertResult.skipped.length;
+
+          renderPreview(convertResult.rows);
+          resultCard.classList.remove('hidden');
+
+          if (convertResult.skipped.length) {
+            showAlert('הומרו ' + convertResult.rows.length + ' משלוחים. ' + convertResult.skipped.length + ' שורות דולגו.', 'info');
+          } else {
+            showAlert('הומרו בהצלחה ' + convertResult.rows.length + ' משלוחים. מוכן להורדה!', 'success');
+          }
+        } catch (err) {
+          showAlert(err.message || 'שגיאה בהמרה', 'error');
+        }
+      }
+
+      async function handleFile(file) {
+        if (!file) return;
+        hideAlert();
+        currentFile = file;
+        fileNameEl.textContent = file.name;
+
+        try {
+          const buffer = await readFileAsArrayBuffer(file);
+          const workbook = XLSX.read(buffer, { type: 'array' });
+          parsedData = sheetToRows(workbook);
+
+          currentColumnMap = buildAutoColumnMap(parsedData.headers);
+          resultCard.classList.add('hidden');
+
+          runConversion();
+        } catch (err) {
+          showAlert(err.message || 'שגיאה בטעינת הקובץ', 'error');
+        }
+      }
+
+      fileInput.addEventListener('change', function(e) { handleFile(e.target.files[0]); });
+
+      uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('dragover');
+      });
+      uploadZone.addEventListener('dragleave', function() {
+        uploadZone.classList.remove('dragover');
+      });
+      uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('dragover');
+        if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+      });
+
+      downloadBtn.addEventListener('click', downloadConvertedFile);
+
+      toggleColumnsBtn.addEventListener('click', function() {
+        showAllPreviewColumns = !showAllPreviewColumns;
+        applyPreviewColumnVisibility();
+      });
+
+      deleteRowsBtn.addEventListener('click', enterRowSelectMode);
+      confirmDeleteRowsBtn.addEventListener('click', deleteSelectedRows);
+      cancelDeleteRowsBtn.addEventListener('click', exitRowSelectMode);
+      sourceCheckBtn.addEventListener('click', toggleSourceCheckMode);
+
+      tagRowsBtn.addEventListener('click', enterTagMode);
+      cancelTagRowsBtn.addEventListener('click', exitTagMode);
+      tagFragileBtn.addEventListener('click', function() { applyTagToSelected('זהירות שביר'); });
+      tagChocolateBtn.addEventListener('click', function() { applyTagToSelected('זהירות שביר מכיל שוקולדים'); });
+
+      document.addEventListener('click', function(e) {
+        if (!sourceCheckMode || sourcePopup.classList.contains('hidden')) return;
+        if (!sourcePopup.contains(e.target) && !e.target.classList.contains('source-check-mode')) {
+          hideSourcePopup();
+        }
+      });
+
+      updateRowSelectUI();
+      updateSourceCheckUI();
+
+      // ─── Address Book ────────────────────────────────────────────────────────
+      const addressBook = {};
+      (function() {
+        const AB_DISPLAY_COLUMNS = [
+          'שם פרטי', 'שם משפחה', 'טלפון', 'עיר', 'רחוב', 'מספר בית',
+          'קומה', 'דירה', 'הערות משלוח', 'מזהה הזמנה'
+        ];
+
+        let abRows = [];
+        let abFilteredRows = [];
+        let selectedAbPackages = new Map();
+
+        let popupPendingAbIdx = null;
+        let popupPendingCb    = null;
+        let popupPendingTr    = null;
+        let popupBulkRows     = null;
+
+        const abFileInput      = document.getElementById('abFileInput');
+        const abUploadZone     = document.getElementById('abUploadZone');
+        const abLoadedBar      = document.getElementById('abLoadedBar');
+        const abCacheInfo      = document.getElementById('abCacheInfo');
+        const abClearCacheBtn  = document.getElementById('abClearCacheBtn');
+        const abSearchWrap     = document.getElementById('abSearchWrap');
+        const abSearchInput    = document.getElementById('abSearchInput');
+        const abLoadedInfo     = document.getElementById('abLoadedInfo');
+        const abHead           = document.getElementById('abHead');
+        const abBody           = document.getElementById('abBody');
+        const abSelectAllBtn   = document.getElementById('abSelectAllBtn');
+        const abClearSelBtn    = document.getElementById('abClearSelBtn');
+        const abShowSelectedBtn = document.getElementById('abShowSelectedBtn');
+        const abSelectedCount  = document.getElementById('abSelectedCount');
+        let showSelectedOnly = false;
+        const abAddBtn         = document.getElementById('abAddBtn');
+
+        const abPkgPopup   = document.getElementById('abPkgPopup');
+        const abPkgInput   = document.getElementById('abPkgInput');
+        const abPkgConfirm = document.getElementById('abPkgConfirm');
+        const abPkgCancel  = document.getElementById('abPkgCancel');
+
+        function abNorm(h) {
+          return String(h || '')
+            .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff\u00a0\u2007\u202f]/g, '')
+            .replace(/[''׳ʼ]/g, "'")
+            .replace(/\s+/g, ' ')
+            .trim();
+        }
+
+        function abEscapeHtml(str) {
+          return String(str || '')
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        }
+
+        const abStatusNote     = document.getElementById('abStatusNote');
+        const abUpdateBtn      = document.getElementById('abUpdateBtn');
+
+        // The address book lives on the server: one shared list that only an admin replaces.
+        // Rows travel as arrays in DELIVERY_COLUMNS order to keep the upload small.
+        function abSaveToServer(rows, fileName) {
+          const packed = rows.map(function(row) {
+            return DELIVERY_COLUMNS.map(function(col) { return row[col] || ''; });
+          });
+          return rpc('dlv_ab_save', { p_token: authToken, p_file_name: fileName, p_columns: DELIVERY_COLUMNS, p_rows: packed });
+        }
+
+        function abUnpack(columns, rows) {
+          return (rows || []).map(function(arr, i) {
+            const obj = { _abIdx: i };
+            DELIVERY_COLUMNS.forEach(function(col) {
+              const idx = (columns || []).indexOf(col);
+              obj[col] = idx >= 0 && arr[idx] != null ? String(arr[idx]) : '';
+            });
+            return obj;
+          });
+        }
+
+        function abSetNote(text) {
+          abStatusNote.textContent = text || '';
+          abStatusNote.classList.toggle('hidden', !text);
+        }
+
+        function showLoadedBar(fileName, count, savedAt, savedBy) {
+          abUploadZone.classList.add('hidden');
+          abSetNote('');
+          abLoadedBar.classList.remove('hidden');
+          abUpdateBtn.classList.toggle('hidden', !isAdmin());
+          abClearCacheBtn.classList.toggle('hidden', !isAdmin());
+          const d = savedAt
+            ? new Date(savedAt).toLocaleDateString('he-IL', { day:'2-digit', month:'2-digit', year:'2-digit' })
+            : '';
+          abCacheInfo.textContent = fileName + ' — ' + count + ' כתובות' +
+            (d ? '  |  עודכן ' + d : '') + (savedBy ? ' ע"י ' + savedBy : '');
+        }
+
+        // No address book yet: the admin gets the upload box, everyone else a note.
+        function showUploadZone() {
+          abLoadedBar.classList.add('hidden');
+          abUploadZone.classList.toggle('hidden', !isAdmin());
+          abSetNote(isAdmin() ? '' : 'מאגר הכתובות עוד לא הועלה. המנהל מעלה אותו.');
+          abSearchWrap.classList.add('hidden');
+          abRows = []; abFilteredRows = [];
+          selectedAbPackages.clear();
+          hideAbPopup(true);
+        }
+
+        function updateAbSelectedCount() {
+          const n = selectedAbPackages.size;
+          abSelectedCount.textContent = n ? ('נבחרו ' + n + ' שורות') : 'לא נבחרו שורות';
+          abAddBtn.disabled = n === 0;
+        }
+
+        function positionPopup(anchorEl) {
+          const r = anchorEl.getBoundingClientRect();
+          let top  = r.bottom + 8;
+          let left = r.right - 10;
+          abPkgPopup.classList.remove('hidden');
+          requestAnimationFrame(function() {
+            const pr = abPkgPopup.getBoundingClientRect();
+            if (top  + pr.height > window.innerHeight - 12) top  = r.top - pr.height - 8;
+            if (left + pr.width  > window.innerWidth  - 12) left = window.innerWidth - pr.width - 12;
+            if (left < 8) left = 8;
+            abPkgPopup.style.top  = top  + 'px';
+            abPkgPopup.style.left = left + 'px';
+            abPkgInput.focus();
+            abPkgInput.select();
+          });
+        }
+
+        function showAbPopupFor(cb, tr, abIdx) {
+          popupPendingCb    = cb;
+          popupPendingTr    = tr;
+          popupPendingAbIdx = abIdx;
+          popupBulkRows     = null;
+          abPkgInput.value  = selectedAbPackages.has(abIdx) ? String(selectedAbPackages.get(abIdx)) : '1';
+          positionPopup(tr);
+        }
+
+        function showAbPopupBulk(rows, anchorEl) {
+          popupPendingCb    = null;
+          popupPendingTr    = null;
+          popupPendingAbIdx = null;
+          popupBulkRows     = rows;
+          abPkgInput.value  = '1';
+          positionPopup(anchorEl);
+        }
+
+        function confirmAbPopup() {
+          const count = Math.max(1, parseInt(abPkgInput.value, 10) || 1);
+          if (popupBulkRows) {
+            popupBulkRows.forEach(function(r) { selectedAbPackages.set(r._abIdx, count); });
+            abBody.querySelectorAll('tr').forEach(function(tr) {
+              const cb = tr.querySelector('input.ab-row-check');
+              if (!cb) return;
+              const idx = parseInt(cb.dataset.abIndex, 10);
+              if (selectedAbPackages.has(idx)) {
+                cb.checked = true;
+                tr.style.background = '#eff6ff';
+                setRowBadge(tr, count);
+              }
+            });
+          } else {
+            selectedAbPackages.set(popupPendingAbIdx, count);
+            popupPendingCb.checked = true;
+            popupPendingTr.style.background = '#eff6ff';
+            setRowBadge(popupPendingTr, count);
+          }
+          hideAbPopup(false);
+          updateAbSelectedCount();
+          abSearchInput.value = '';
+          abSearch();
+          abSearchInput.focus();
+        }
+
+        function hideAbPopup(cancelled) {
+          if (cancelled && popupPendingCb && !selectedAbPackages.has(popupPendingAbIdx)) {
+            popupPendingCb.checked = false;
+            if (popupPendingTr) popupPendingTr.style.background = '';
+          }
+          abPkgPopup.classList.add('hidden');
+          popupPendingAbIdx = null; popupPendingCb = null; popupPendingTr = null; popupBulkRows = null;
+        }
+
+        function setRowBadge(tr, count) {
+          const checkTd = tr.querySelector('.preview-select');
+          if (!checkTd) return;
+          let badge = checkTd.querySelector('.ab-pkg-badge');
+          if (!badge) {
+            badge = document.createElement('div');
+            badge.className = 'ab-pkg-badge';
+            badge.style.cssText = 'font-size:0.7rem;font-weight:700;color:#fff;background:var(--accent);border-radius:8px;padding:1px 6px;margin-top:3px;text-align:center;display:inline-block;line-height:1.4;cursor:default;';
+            badge.title = 'מספר קרטונים';
+            checkTd.appendChild(badge);
+          }
+          badge.textContent = count;
+        }
+
+        function removeRowBadge(tr) {
+          const b = tr && tr.querySelector('.ab-pkg-badge');
+          if (b) b.remove();
+        }
+
+        abPkgConfirm.addEventListener('click', confirmAbPopup);
+        abPkgCancel.addEventListener('click',  function() { hideAbPopup(true); });
+        abPkgInput.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter')  { e.preventDefault(); confirmAbPopup(); }
+          if (e.key === 'Escape') { e.preventDefault(); hideAbPopup(true); }
+        });
+        abPkgInput.addEventListener('focus', function() { abPkgInput.style.borderColor = 'var(--accent)'; abPkgInput.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.15)'; });
+        abPkgInput.addEventListener('blur',  function() { abPkgInput.style.borderColor = 'var(--border)'; abPkgInput.style.boxShadow = ''; });
+        document.addEventListener('mousedown', function(e) {
+          if (abPkgPopup.classList.contains('hidden')) return;
+          if (!abPkgPopup.contains(e.target)) hideAbPopup(true);
+        });
+
+        function renderAbTable(filtered) {
+          abFilteredRows = filtered;
+          const allVisible = filtered.length > 0 && filtered.every(function(r) { return selectedAbPackages.has(r._abIdx); });
+          let headHtml = '<th class="preview-select"><input type="checkbox" id="abSelectAllCheck"' + (allVisible ? ' checked' : '') + ' title="בחר הכל הנראה"></th>';
+          AB_DISPLAY_COLUMNS.forEach(function(col) {
+            headHtml += '<th class="preview-editable" data-column="' + abEscapeHtml(col) + '">' + abEscapeHtml(col) + '</th>';
+          });
+          abHead.innerHTML = '<tr>' + headHtml + '</tr>';
+
+          const sac = document.getElementById('abSelectAllCheck');
+          if (sac) {
+            sac.addEventListener('change', function() {
+              if (sac.checked) {
+                sac.checked = false;
+                showAbPopupBulk(filtered.slice(), sac);
+              } else {
+                filtered.forEach(function(r) { selectedAbPackages.delete(r._abIdx); });
+                abBody.querySelectorAll('tr').forEach(function(tr) {
+                  const cb = tr.querySelector('input.ab-row-check');
+                  if (cb) {
+                    const idx = parseInt(cb.dataset.abIndex, 10);
+                    if (!selectedAbPackages.has(idx)) { cb.checked = false; tr.style.background = ''; removeRowBadge(tr); }
+                  }
+                });
+                updateAbSelectedCount();
+              }
+            });
+          }
+
+          abBody.innerHTML = '';
+          if (!filtered.length) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = AB_DISPLAY_COLUMNS.length + 1;
+            td.style.cssText = 'text-align:center;color:var(--muted);padding:24px;';
+            td.textContent = 'לא נמצאו תוצאות';
+            tr.appendChild(td); abBody.appendChild(tr);
+            updateAbSelectedCount(); return;
+          }
+
+          filtered.forEach(function(row) {
+            const abIdx    = row._abIdx;
+            const pkgCount = selectedAbPackages.get(abIdx);
+            const isChecked = pkgCount !== undefined;
+            const tr = document.createElement('tr');
+            if (isChecked) tr.style.background = '#eff6ff';
+
+            const checkTd = document.createElement('td');
+            checkTd.className = 'preview-select';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.className = 'ab-row-check';
+            cb.dataset.abIndex = String(abIdx);
+            cb.checked = isChecked;
+            cb.addEventListener('change', function() {
+              if (cb.checked) { showAbPopupFor(cb, tr, abIdx); }
+              else { selectedAbPackages.delete(abIdx); tr.style.background = ''; removeRowBadge(tr); updateAbSelectedCount(); }
+            });
+            checkTd.appendChild(cb);
+            if (isChecked) { requestAnimationFrame(function() { setRowBadge(tr, pkgCount); }); }
+            tr.appendChild(checkTd);
+
+            AB_DISPLAY_COLUMNS.forEach(function(col) {
+              const td = document.createElement('td');
+              td.className = 'preview-editable';
+              td.dataset.column = col;
+              td.style.whiteSpace = 'nowrap';
+              td.textContent = row[col] || '';
+              tr.appendChild(td);
+            });
+            abBody.appendChild(tr);
+          });
+          updateAbSelectedCount();
+        }
+
+        function abSearch() {
+          const q = abNorm(abSearchInput.value).toLowerCase();
+          const abTableWrap  = document.getElementById('abTableWrap');
+          const abSearchHint = document.getElementById('abSearchHint');
+          const hasQuery = !!q || showSelectedOnly;
+
+          if (!hasQuery) {
+            abTableWrap.style.display = 'none';
+            abSearchHint.style.display = '';
+            return;
+          }
+
+          abTableWrap.style.display = '';
+          abSearchHint.style.display = 'none';
+
+          let results = abRows.slice();
+          if (q) {
+            results = results.filter(function(row) {
+              return DELIVERY_COLUMNS.some(function(col) {
+                return abNorm(row[col]).toLowerCase().indexOf(q) >= 0;
+              });
+            });
+          }
+          if (showSelectedOnly) {
+            results = results.filter(function(row) { return selectedAbPackages.has(row._abIdx); });
+          }
+          renderAbTable(results);
+        }
+
+        const AB_ALIASES = {
+          'שם פרטי':    ['שם', 'שם פרטי', 'first name'],
+          'מספר בית':   ['מספר', 'מספר בית', 'מס׳', "מס'", 'בית'],
+          'שם משפחה':   ['שם משפחה', 'משפחה', 'last name'],
+          'טלפון':       ['טלפון', 'נייד', 'פלאפון', 'מספר טלפון', 'phone'],
+          'עיר':         ['עיר', 'עיר מגורים', 'יישוב'],
+          'הערות משלוח': ['הערות משלוח', 'הערות', 'הערה'],
+          'מזהה הזמנה':  ['מזהה הזמנה', 'מזהה', 'הזמנה', 'מס׳ הזמנה', "מס' הזמנה"],
+        };
+
+        function abFindColumnIndex(fileHeaders, col) {
+          const normCol = abNorm(col);
+          let idx = fileHeaders.indexOf(normCol);
+          if (idx >= 0) return idx;
+          idx = fileHeaders.findIndex(function(h) { return h.toLowerCase() === normCol.toLowerCase(); });
+          if (idx >= 0) return idx;
+          const aliases = AB_ALIASES[col] || [];
+          for (let a = 0; a < aliases.length; a++) {
+            const normAlias = abNorm(aliases[a]);
+            idx = fileHeaders.findIndex(function(h) { return h === normAlias || h.toLowerCase() === normAlias.toLowerCase(); });
+            if (idx >= 0) return idx;
+          }
+          return -1;
+        }
+
+        function abParseWorkbook(workbook) {
+          const parsed = sheetToRows(workbook);
+          const fileHeaders = parsed.headers.map(abNorm);
+          const colIndexMap = {};
+          const claimed = new Set();
+          DELIVERY_COLUMNS.forEach(function(col) {
+            const idx = abFindColumnIndex(fileHeaders, col);
+            if (idx >= 0 && !claimed.has(idx)) { colIndexMap[col] = idx; claimed.add(idx); }
+            else { colIndexMap[col] = -1; }
+          });
+          return parsed.dataRows
+            .filter(function(row) { return row.some(function(cell) { return String(cell || '').trim(); }); })
+            .map(function(rawRow, i) {
+              const obj = { _abIdx: i };
+              DELIVERY_COLUMNS.forEach(function(col) {
+                const idx = colIndexMap[col];
+                obj[col] = idx >= 0 ? String(rawRow[idx] || '').trim() : '';
+              });
+              return obj;
+            });
+        }
+
+        function abActivate(fileName, savedAt, savedBy) {
+          abLoadedInfo.textContent = abRows.length + ' כתובות';
+          showLoadedBar(fileName, abRows.length, savedAt, savedBy);
+          abSearchWrap.classList.remove('hidden');
+          abSearchInput.value = '';
+          abSearch();
+        }
+
+        async function abHandleFile(file) {
+          abFileInput.value = '';
+          if (!file || !isAdmin()) return;
+          let rows;
+          try {
+            const buffer = await readFileAsArrayBuffer(file);
+            const workbook = XLSX.read(buffer, { type: 'array' });
+            rows = abParseWorkbook(workbook);
+          } catch (err) {
+            showAlert('שגיאה בטעינת קובץ המאגר: ' + (err.message || 'לא ידוע'), 'error');
+            return;
+          }
+          if (!rows.length) {
+            showAlert('בקובץ המאגר אין שורות עם נתונים.', 'error');
+            return;
+          }
+          showAlert('מעלה את מאגר הכתובות לשרת...', 'info');
+          try {
+            await abSaveToServer(rows, file.name);
+          } catch (err) {
+            showAlert('המאגר לא נשמר בשרת: ' + serverErrorText(err), 'error');
+            return;
+          }
+          abRows = rows;
+          selectedAbPackages.clear();
+          abActivate(file.name, Date.now(), me && me.name);
+          showAlert('מאגר הכתובות נשמר בשרת (' + rows.length + ' כתובות) ויופיע לכל המשתמשים.', 'success');
+        }
+
+        function addSelectedToDeliveries() {
+          if (!selectedAbPackages.size) return;
+          const selectedRows = Array.from(selectedAbPackages.keys())
+            .map(function(idx) {
+              const row = abRows.find(function(r) { return r._abIdx === idx; });
+              return row ? { row: row, count: selectedAbPackages.get(idx) } : null;
+            })
+            .filter(Boolean);
+
+          if (!convertResult) {
+            convertResult = { totalInputRows: 0, rows: [], rowSources: [], skipped: [] };
+          }
+
+          selectedRows.forEach(function(entry) {
+            const row = entry.row;
+            const pkgStr = String(entry.count);
+            const copy = {};
+            DELIVERY_COLUMNS.forEach(function(col) {
+              copy[col] = col === 'מספר חבילות' ? pkgStr : (row[col] || '');
+            });
+            convertResult.rows.push(copy);
+            convertResult.rowSources.push(
+              DELIVERY_COLUMNS.reduce(function(acc, col) {
+                acc[col] = { header: 'מאגר כתובות', rawValue: copy[col], note: '' };
+                return acc;
+              }, {})
+            );
+          });
+
+          document.getElementById('statInput').textContent   = convertResult.totalInputRows;
+          document.getElementById('statOutput').textContent  = convertResult.rows.length;
+          document.getElementById('statSkipped').textContent = (convertResult.skipped || []).length;
+
+          resultCard.classList.remove('hidden');
+          showAllPreviewColumns = false;
+          rowSelectMode = false;
+          tagMode = false;
+          sourceCheckMode = false;
+          updateRowSelectUI(); updateSourceCheckUI(); hideSourcePopup();
+          renderPreview(convertResult.rows);
+
+          showAlert('נוספו ' + selectedRows.length + ' משלוחים מהמאגר. סה"כ ' + convertResult.rows.length + ' משלוחים.', 'success');
+
+          selectedAbPackages.clear();
+          abSearchInput.value = '';
+          abSearch();
+        }
+
+        abFileInput.addEventListener('change', function(e) { abHandleFile(e.target.files[0]); });
+        abUploadZone.addEventListener('click', function() { abFileInput.click(); });
+        abUploadZone.addEventListener('keydown', function(e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abFileInput.click(); }
+        });
+        abUploadZone.addEventListener('dragover', function(e) { e.preventDefault(); abUploadZone.classList.add('dragover'); });
+        abUploadZone.addEventListener('dragleave', function() { abUploadZone.classList.remove('dragover'); });
+        abUploadZone.addEventListener('drop', function(e) {
+          e.preventDefault(); abUploadZone.classList.remove('dragover');
+          if (e.dataTransfer.files[0]) abHandleFile(e.dataTransfer.files[0]);
+        });
+
+        abSearchInput.addEventListener('input', abSearch);
+        abSelectAllBtn.addEventListener('click', function() {
+          if (!abFilteredRows.length) return;
+          showAbPopupBulk(abFilteredRows.slice(), abSelectAllBtn);
+        });
+        abShowSelectedBtn.addEventListener('click', function() {
+          showSelectedOnly = !showSelectedOnly;
+          abShowSelectedBtn.textContent = showSelectedOnly ? 'הצג הכל' : 'הצג מסומנים';
+          abShowSelectedBtn.style.fontWeight = showSelectedOnly ? '700' : '';
+          abSearch();
+        });
+        abClearSelBtn.addEventListener('click', function() {
+          selectedAbPackages.clear();
+          showSelectedOnly = false;
+          abShowSelectedBtn.textContent = 'הצג מסומנים';
+          abShowSelectedBtn.style.fontWeight = '';
+          abBody.querySelectorAll('tr').forEach(function(tr) {
+            const cb = tr.querySelector('input.ab-row-check');
+            if (cb) { cb.checked = false; tr.style.background = ''; }
+            removeRowBadge(tr);
+          });
+          updateAbSelectedCount();
+          abSearch();
+        });
+        abAddBtn.addEventListener('click', addSelectedToDeliveries);
+        abClearCacheBtn.addEventListener('click', async function() {
+          if (!window.confirm('למחוק את מאגר הכתובות מהשרת? הוא יימחק לכל המשתמשים, ותצטרך להעלות קובץ מחדש.')) return;
+          try {
+            await rpc('dlv_ab_clear', { p_token: authToken });
+          } catch (err) {
+            showAlert('המאגר לא נמחק: ' + serverErrorText(err), 'error');
+            return;
+          }
+          showUploadZone();
+          showAlert('מאגר הכתובות נמחק מהשרת.', 'info');
+        });
+
+        abSearchInput.addEventListener('focus', function() { abSearchInput.style.borderColor = 'var(--accent)'; abSearchInput.style.boxShadow = '0 0 0 3px rgba(37,99,235,0.15)'; });
+        abSearchInput.addEventListener('blur',  function() { abSearchInput.style.borderColor = 'var(--border)'; abSearchInput.style.boxShadow = ''; });
+
+        addressBook.load = async function() {
+          abLoadedBar.classList.add('hidden');
+          abUploadZone.classList.add('hidden');
+          abSearchWrap.classList.add('hidden');
+          abSetNote('טוען את מאגר הכתובות מהשרת...');
+          let data;
+          try {
+            data = await rpc('dlv_ab_get', { p_token: authToken });
+          } catch (err) {
+            abSetNote('');
+            showUploadZone();
+            showAlert('מאגר הכתובות לא נטען: ' + serverErrorText(err), 'error');
+            return;
+          }
+          if (data && data.row_count > 0) {
+            abRows = abUnpack(data.columns, data.rows);
+            selectedAbPackages.clear();
+            abActivate(data.file_name || 'מאגר כתובות', data.uploaded_at, data.uploaded_by);
+          } else {
+            showUploadZone();
+          }
+        };
+      })();
+
+      // ─── Sign-in, users and devices ─────────────────────────────────────────
+      // Like מכירות מול החזרות: a password is not enough, the admin approves each browser once.
+      // Unlike it, a session never runs out: it ends only on "יציאה" (or when the admin removes the device).
+      const TOKEN_KEY = 'dlv-token';
+      const DEVICE_KEY = 'dlv-device';
+
+      const authScreen       = document.getElementById('authScreen');
+      const authSub          = document.getElementById('authSub');
+      const authError        = document.getElementById('authError');
+      const authForm         = document.getElementById('authForm');
+      const authUser         = document.getElementById('authUser');
+      const authPass         = document.getElementById('authPass');
+      const authNameField    = document.getElementById('authNameField');
+      const authName         = document.getElementById('authName');
+      const authDeviceField  = document.getElementById('authDeviceField');
+      const authDevice       = document.getElementById('authDevice');
+      const authSubmit       = document.getElementById('authSubmit');
+      const authPending      = document.getElementById('authPending');
+      const authRetry        = document.getElementById('authRetry');
+      const authBack         = document.getElementById('authBack');
+      const authOffline      = document.getElementById('authOffline');
+      const authOfflineRetry = document.getElementById('authOfflineRetry');
+      const appContainer     = document.getElementById('appContainer');
+      const userNameEl       = document.getElementById('userName');
+      const usersBtn         = document.getElementById('usersBtn');
+      const pendingBadge     = document.getElementById('pendingBadge');
+      const passwordBtn      = document.getElementById('passwordBtn');
+      const logoutBtn        = document.getElementById('logoutBtn');
+      const usersModal       = document.getElementById('usersModal');
+      const usersError       = document.getElementById('usersError');
+      const userFormWrap     = document.getElementById('userFormWrap');
+      const usersList        = document.getElementById('usersList');
+      const addUserBtn       = document.getElementById('addUserBtn');
+      const closeUsersBtn    = document.getElementById('closeUsersBtn');
+      const passwordModal    = document.getElementById('passwordModal');
+      const passwordError    = document.getElementById('passwordError');
+      const passwordForm     = document.getElementById('passwordForm');
+      const pwOld            = document.getElementById('pwOld');
+      const pwNew            = document.getElementById('pwNew');
+      const pwCancel         = document.getElementById('pwCancel');
+
+      const SERVER_ERRORS = {
+        NETWORK: 'אין חיבור לשרת. בדוק את האינטרנט ונסה שוב.',
+        BAD_LOGIN: 'שם משתמש או סיסמה שגויים.',
+        LOCKED: 'יותר מדי ניסיונות שגויים. נסה שוב בעוד 10 דקות.',
+        INACTIVE: 'המשתמש הזה חסום. פנה למנהל.',
+        TOO_MANY_DEVICES: 'יש כבר יותר מדי מכשירים שממתינים לאישור. פנה למנהל.',
+        DEVICE_REQUIRED: 'הדפדפן לא שולח את זיהוי המכשיר. רענן את הדף ונסה שוב.',
+        WEAK_PASSWORD: 'הסיסמה צריכה להיות לפחות 6 תווים.',
+        BAD_USERNAME: 'שם משתמש: לפחות 2 תווים, בלי רווחים.',
+        USERNAME_TAKEN: 'שם המשתמש הזה כבר קיים.',
+        NOT_SELF: 'אי אפשר לחסום, למחוק או להוריד הרשאת מנהל לעצמך, ולא להסיר את המכשיר שאתה מחובר ממנו.',
+        ADMIN_ONLY: 'רק מנהל יכול לעשות את זה.',
+        AUTH: 'החיבור הסתיים. צריך להיכנס שוב.',
+        SETUP_DONE: 'כבר קיים מנהל במערכת.',
+        BAD_DATA: 'הנתונים שנשלחו לא תקינים.'
+      };
+
+      let authMode = 'login';
+      let pendingCredentials = null;
+      let usersData = [];
+      let editingUser = null;
+
+      // This browser: a random key that never leaves it except to sign in.
+      let deviceKey = null;
+      try { deviceKey = localStorage.getItem(DEVICE_KEY); } catch (e) {}
+      if (!deviceKey || deviceKey.length < 32) {
+        const bytes = new Uint8Array(32);
+        crypto.getRandomValues(bytes);
+        deviceKey = Array.from(bytes, function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+        try { localStorage.setItem(DEVICE_KEY, deviceKey); } catch (e) {}
+      }
+
+      // What the admin sees in the list, e.g. "מחשב Windows · Chrome"
+      function deviceLabel() {
+        const ua = navigator.userAgent || '';
+        const kind =
+          /iPhone/.test(ua) ? 'אייפון' :
+          /iPad/.test(ua) ? 'אייפד' :
+          /Android/.test(ua) ? (/Mobile/.test(ua) ? 'טלפון אנדרואיד' : 'טאבלט אנדרואיד') :
+          /Windows/.test(ua) ? 'מחשב Windows' :
+          /Macintosh|Mac OS X/.test(ua) ? 'מחשב Mac' :
+          /Linux/.test(ua) ? 'מחשב Linux' : 'מכשיר';
+        const browser =
+          /Edg\//.test(ua) ? 'Edge' :
+          /SamsungBrowser/.test(ua) ? 'Samsung Internet' :
+          /Firefox\//.test(ua) ? 'Firefox' :
+          /OPR\//.test(ua) ? 'Opera' :
+          /Chrome\//.test(ua) ? 'Chrome' :
+          /Safari\//.test(ua) ? 'Safari' : 'דפדפן';
+        let installed = false;
+        try { installed = window.matchMedia('(display-mode: standalone)').matches; } catch (e) {}
+        return kind + ' · ' + browser + (installed ? ' · אפליקציה' : '');
+      }
+
+      function storeToken(t) {
+        authToken = t || null;
+        try {
+          if (t) localStorage.setItem(TOKEN_KEY, t);
+          else localStorage.removeItem(TOKEN_KEY);
+        } catch (e) {}
+      }
+
+      function isAdmin() {
+        return !!me && me.role === 'admin';
+      }
+
+      function serverErrorText(err) {
+        const code = err && err.code;
+        if (code === 'AUTH' && me) setTimeout(function() { signedOut(SERVER_ERRORS.AUTH); }, 0);
+        if (err && err.status === 404) return 'השרת עוד לא הוגדר: צריך להריץ את קובץ ההגדרה ב-Supabase.';
+        return SERVER_ERRORS[code] || ('שגיאה בשרת (' + (code || 'לא ידוע') + ')');
+      }
+
+      function setAuthError(message) {
+        authError.textContent = message || '';
+        authError.classList.toggle('hidden', !message);
+      }
+
+      // mode: 'loading' | 'login' | 'setup' | 'pending' | 'offline'
+      function showAuth(mode, message) {
+        authScreen.classList.remove('hidden');
+        appContainer.classList.add('hidden');
+        if (mode === 'login' || mode === 'setup') authMode = mode;
+        authForm.classList.toggle('hidden', mode !== 'login' && mode !== 'setup');
+        authPending.classList.toggle('hidden', mode !== 'pending');
+        authOffline.classList.toggle('hidden', mode !== 'offline');
+        authNameField.classList.toggle('hidden', mode !== 'setup');
+        authDeviceField.classList.toggle('hidden', mode !== 'login');
+        authPass.autocomplete = mode === 'setup' ? 'new-password' : 'current-password';
+        authSubmit.textContent = mode === 'setup' ? 'יצירת מנהל וכניסה' : 'כניסה';
+        authSub.textContent = {
+          loading: 'מתחבר...',
+          login: 'כניסה למערכת',
+          setup: 'הגדרה ראשונה: יצירת משתמש המנהל',
+          pending: 'ממתין לאישור',
+          offline: 'אין חיבור לשרת'
+        }[mode];
+        setAuthError(message);
+        if (mode === 'login' || mode === 'setup') authUser.focus();
+      }
+
+      async function signIn(creds) {
+        let r;
+        try {
+          r = authMode === 'setup'
+            ? await rpc('dlv_setup', { p_username: creds.u, p_password: creds.p, p_name: creds.name, p_device: deviceKey, p_label: deviceLabel() })
+            : await rpc('dlv_login', { p_username: creds.u, p_password: creds.p, p_device: deviceKey, p_label: deviceLabel(), p_name: creds.device });
+        } catch (err) {
+          if (err.code === 'SETUP_DONE') {
+            showAuth('login', 'כבר קיים מנהל. היכנס עם שם המשתמש והסיסמה.');
+            return;
+          }
+          showAuth(pendingCredentials ? 'pending' : authMode, serverErrorText(err));
+          return;
+        }
+        if (r && r.error === 'DEVICE_PENDING') {
+          pendingCredentials = creds;
+          showAuth('pending');
+          return;
+        }
+        if (!r || r.error) {
+          pendingCredentials = null;
+          showAuth('login', SERVER_ERRORS[r && r.error] || 'הכניסה נכשלה.');
+          return;
+        }
+        pendingCredentials = null;
+        authPass.value = '';
+        storeToken(r.token);
+        signedIn(r.user);
+      }
+
+      function signedIn(user) {
+        me = user;
+        authScreen.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        userNameEl.textContent = '👤 ' + (me.name || me.username);
+        usersBtn.classList.toggle('hidden', !isAdmin());
+        updatePendingBadge(me.pending);
+        loadCitiesFromServer();
+        addressBook.load();
+      }
+
+      function signedOut(message) {
+        storeToken(null);
+        me = null;
+        usersModal.classList.add('hidden');
+        passwordModal.classList.add('hidden');
+        showAuth('login', message);
+      }
+
+      function updatePendingBadge(count) {
+        pendingBadge.textContent = count || '';
+        pendingBadge.classList.toggle('hidden', !count);
+      }
+
+      // Keeps the name, the role and the admin's pending-requests count up to date.
+      async function refreshMe() {
+        if (!authToken || !me) return;
+        try {
+          me = await rpc('dlv_me', { p_token: authToken });
+          userNameEl.textContent = '👤 ' + (me.name || me.username);
+          usersBtn.classList.toggle('hidden', !isAdmin());
+          updatePendingBadge(me.pending);
+        } catch (err) {
+          if (err.code === 'AUTH') signedOut(SERVER_ERRORS.AUTH);
+        }
+      }
+
+      async function startAuth() {
+        try { authToken = localStorage.getItem(TOKEN_KEY) || null; } catch (e) {}
+        showAuth('loading');
+        if (authToken) {
+          try {
+            signedIn(await rpc('dlv_me', { p_token: authToken }));
+            return;
+          } catch (err) {
+            if (err.code !== 'AUTH') {
+              showAuth('offline', serverErrorText(err));
+              return;
+            }
+            storeToken(null);
+          }
+        }
+        try {
+          const st = await rpc('dlv_status');
+          showAuth(st && st.ready ? 'login' : 'setup');
+        } catch (err) {
+          showAuth('offline', serverErrorText(err));
+        }
+      }
+
+      // The settlements list on the server replaces the one the page carries (which stays as a backup).
+      async function loadCitiesFromServer() {
+        let map;
+        try {
+          map = await rpc('dlv_cities_get', { p_token: authToken });
+        } catch (err) {
+          return;
+        }
+        if (!map) return;
+        window.DELIVERY_CITIES_CACHE = Object.assign(window.DELIVERY_CITIES_CACHE || {}, map);
+        Object.keys(deliveryDaysMemoryCache).forEach(function(key) { delete deliveryDaysMemoryCache[key]; });
+        if (convertResult && convertResult.rows.length) refreshAllDeliveryDays(convertResult.rows);
+      }
+
+      authForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const creds = { u: authUser.value.trim(), p: authPass.value, name: authName.value.trim(), device: authDevice.value.trim() };
+        if (!creds.u || !creds.p) return;
+        authSubmit.disabled = true;
+        setAuthError('');
+        try { await signIn(creds); } finally { authSubmit.disabled = false; }
+      });
+      authRetry.addEventListener('click', async function() {
+        if (!pendingCredentials) { showAuth('login'); return; }
+        authRetry.disabled = true;
+        try { await signIn(pendingCredentials); } finally { authRetry.disabled = false; }
+      });
+      authBack.addEventListener('click', function() {
+        pendingCredentials = null;
+        authPass.value = '';
+        showAuth('login');
+      });
+      authOfflineRetry.addEventListener('click', startAuth);
+
+      logoutBtn.addEventListener('click', async function() {
+        if (!window.confirm('לצאת מהמערכת? בכניסה הבאה תצטרך שם משתמש וסיסמה.')) return;
+        const t = authToken;
+        storeToken(null);
+        try { await rpc('dlv_logout', { p_token: t }); } catch (e) { /* the local sign-in is already gone */ }
+        location.reload();
+      });
+
+      window.addEventListener('focus', refreshMe);
+      setInterval(refreshMe, 2 * 60000);
+
+      // ---------- change password ----------
+      function closePasswordModal() {
+        passwordModal.classList.add('hidden');
+        pwOld.value = '';
+        pwNew.value = '';
+      }
+      passwordBtn.addEventListener('click', function() {
+        passwordError.classList.add('hidden');
+        passwordModal.classList.remove('hidden');
+        pwOld.focus();
+      });
+      pwCancel.addEventListener('click', closePasswordModal);
+      passwordModal.addEventListener('click', function(e) { if (e.target === passwordModal) closePasswordModal(); });
+      passwordForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        try {
+          await rpc('dlv_change_password', { p_token: authToken, p_old: pwOld.value, p_new: pwNew.value });
+        } catch (err) {
+          passwordError.textContent = err.code === 'BAD_LOGIN' ? 'הסיסמה הנוכחית שגויה.' : serverErrorText(err);
+          passwordError.classList.remove('hidden');
+          return;
+        }
+        closePasswordModal();
+        showAlert('הסיסמה הוחלפה.', 'success');
+      });
+
+      // ---------- users and devices (admin) ----------
+      function setUsersError(message) {
+        usersError.textContent = message || '';
+        usersError.classList.toggle('hidden', !message);
+      }
+
+      function formatWhen(value) {
+        if (!value) return '';
+        const d = new Date(value);
+        return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: '2-digit' }) + ' ' +
+          d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      async function loadUsers() {
+        try {
+          usersData = await rpc('dlv_users_list', { p_token: authToken }) || [];
+        } catch (err) {
+          setUsersError(serverErrorText(err));
+          return;
+        }
+        renderUsers();
+        updatePendingBadge(usersData.reduce(function(n, u) {
+          return n + u.devices.filter(function(d) { return d.status === 'pending'; }).length;
+        }, 0));
+      }
+
+      function renderUsers() {
+        usersList.innerHTML = usersData.map(function(u) {
+          const isSelf = me && u.id === me.id;
+          const devices = u.devices.length ? u.devices.map(function(d) {
+            const pending = d.status === 'pending';
+            return '<div class="device-row' + (pending ? ' is-pending' : '') + '">' +
+              (pending ? '<span class="tag tag-pending">ממתין לאישור</span>' : '<span class="tag tag-ok">מאושר</span>') +
+              '<span class="device-name">' + escapeHtml(d.name || d.label || 'מכשיר') + '</span>' +
+              (d.name && d.label ? '<span class="device-when">' + escapeHtml(d.label) + '</span>' : '') +
+              '<span class="device-when">' +
+                (pending ? 'ביקש ' + formatWhen(d.created_at) : (d.last_login ? 'נכנס ' + formatWhen(d.last_login) : '')) +
+              '</span>' +
+              '<span class="spacer"></span>' +
+              (pending ? '<button class="btn btn-success" type="button" data-act="approve" data-id="' + d.id + '">✓ אשר</button>' : '') +
+              '<button class="btn btn-danger" type="button" data-act="remove" data-id="' + d.id + '">' + (pending ? 'דחה' : 'הסר') + '</button>' +
+            '</div>';
+          }).join('') : '<div class="device-none">עוד לא נכנס מאף מכשיר</div>';
+
+          return '<div class="user-card">' +
+            '<div class="user-card-head">' +
+              '<span class="user-card-name">' + escapeHtml(u.name || u.username) + '</span>' +
+              '<span class="user-card-meta">' + escapeHtml(u.username) + '</span>' +
+              (u.role === 'admin' ? '<span class="tag tag-admin">מנהל</span>' : '') +
+              (u.active ? '' : '<span class="tag tag-off">חסום</span>') +
+              (isSelf ? '<span class="user-card-meta">(אתה)</span>' : '') +
+              '<span class="spacer"></span>' +
+              '<button class="btn btn-secondary" type="button" data-act="edit" data-id="' + u.id + '">עריכה</button>' +
+              (isSelf ? '' : '<button class="btn btn-danger" type="button" data-act="delete" data-id="' + u.id + '">מחיקה</button>') +
+            '</div>' +
+            '<div class="device-list">' + devices + '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      function renderUserForm() {
+        if (!editingUser) {
+          userFormWrap.innerHTML = '';
+          return;
+        }
+        const u = editingUser;
+        const isNew = !u.id;
+        const isSelf = !!me && u.id === me.id;
+        userFormWrap.innerHTML =
+          '<form class="user-form" id="userForm">' +
+            '<div class="modal-title" style="font-size:1rem;margin-bottom:12px;">' +
+              (isNew ? 'משתמש חדש' : 'עריכת ' + escapeHtml(u.name || u.username)) + '</div>' +
+            '<label class="field"><span>שם משתמש (לכניסה, בלי רווחים)</span>' +
+              '<input id="ufUser" autocapitalize="off" spellcheck="false" required value="' + escapeHtml(u.username || '') + '"></label>' +
+            '<label class="field"><span>שם להצגה</span><input id="ufName" value="' + escapeHtml(u.name || '') + '"></label>' +
+            '<label class="field"><span>' + (isNew ? 'סיסמה (לפחות 6 תווים)' : 'סיסמה חדשה (להשאיר ריק כדי לא לשנות)') + '</span>' +
+              '<input id="ufPass" type="password" autocomplete="new-password"' + (isNew ? ' required' : '') + '></label>' +
+            '<label class="field"><span>הרשאה</span><select id="ufRole"' + (isSelf ? ' disabled' : '') + '>' +
+              '<option value="user">משתמש: המרת קבצים וחיפוש במאגר</option>' +
+              '<option value="admin">מנהל: גם העלאת מאגר ואישור מכשירים</option>' +
+            '</select></label>' +
+            '<label class="field-check"><input type="checkbox" id="ufActive"' + (u.active === false ? '' : ' checked') + (isSelf ? ' disabled' : '') + '>' +
+              ' פעיל (בלי סימון המשתמש חסום)</label>' +
+            '<div class="user-form-actions">' +
+              '<button class="btn btn-primary" type="submit">שמור</button>' +
+              '<button class="btn btn-secondary" type="button" id="ufCancel">ביטול</button>' +
+            '</div>' +
+          '</form>';
+        document.getElementById('ufRole').value = u.role || 'user';
+        document.getElementById('userForm').addEventListener('submit', saveUserForm);
+        document.getElementById('ufCancel').addEventListener('click', function() {
+          editingUser = null;
+          renderUserForm();
+        });
+        document.getElementById('ufUser').focus();
+      }
+
+      async function saveUserForm(e) {
+        e.preventDefault();
+        const u = editingUser;
+        try {
+          await rpc('dlv_user_save', {
+            p_token: authToken,
+            p_id: u.id || null,
+            p_username: document.getElementById('ufUser').value.trim(),
+            p_name: document.getElementById('ufName').value.trim(),
+            p_role: document.getElementById('ufRole').value,
+            p_active: document.getElementById('ufActive').checked,
+            p_password: document.getElementById('ufPass').value || null
+          });
+        } catch (err) {
+          setUsersError(serverErrorText(err));
+          return;
+        }
+        editingUser = null;
+        renderUserForm();
+        setUsersError('');
+        await loadUsers();
+        refreshMe();
+      }
+
+      usersList.addEventListener('click', async function(e) {
+        const btn = e.target.closest('button[data-act]');
+        if (!btn) return;
+        const act = btn.dataset.act;
+        const id = btn.dataset.id;
+        if (act === 'edit') {
+          editingUser = usersData.find(function(u) { return u.id === id; }) || null;
+          setUsersError('');
+          renderUserForm();
+          return;
+        }
+        try {
+          if (act === 'approve') {
+            await rpc('dlv_device_set', { p_token: authToken, p_id: id, p_action: 'approve' });
+          } else if (act === 'remove') {
+            if (!window.confirm('להסיר את המכשיר? כדי להיכנס ממנו שוב יצטרכו לבקש אישור מחדש.')) return;
+            await rpc('dlv_device_set', { p_token: authToken, p_id: id, p_action: 'remove' });
+          } else if (act === 'delete') {
+            const u = usersData.find(function(x) { return x.id === id; });
+            if (!window.confirm('למחוק את המשתמש ' + (u ? (u.name || u.username) : '') + '? כל המכשירים שלו יוסרו.')) return;
+            await rpc('dlv_user_delete', { p_token: authToken, p_id: id });
+          }
+        } catch (err) {
+          setUsersError(serverErrorText(err));
+          return;
+        }
+        setUsersError('');
+        await loadUsers();
+      });
+
+      function closeUsersModal() {
+        usersModal.classList.add('hidden');
+        editingUser = null;
+        renderUserForm();
+      }
+      usersBtn.addEventListener('click', function() {
+        setUsersError('');
+        editingUser = null;
+        renderUserForm();
+        usersList.innerHTML = '<div class="device-none">טוען...</div>';
+        usersModal.classList.remove('hidden');
+        loadUsers();
+      });
+      addUserBtn.addEventListener('click', function() {
+        editingUser = { role: 'user', active: true };
+        setUsersError('');
+        renderUserForm();
+      });
+      closeUsersBtn.addEventListener('click', closeUsersModal);
+      usersModal.addEventListener('click', function(e) { if (e.target === usersModal) closeUsersModal(); });
+
+      startAuth();
+      // ────────────────────────────────────────────────────────────────────────
+    })();
+
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+      navigator.serviceWorker.register('sw.js').catch(function() {});
+    }
+  </script>
+</body>
+</html>
