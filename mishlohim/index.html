@@ -13,18 +13,21 @@
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <style>
     :root {
-      --navy: #1a2b4a;
+      --navy: #0f172a;
+      --brand: #1e3a8a;
+      --brand-soft: #eaf0ff;
       --accent: #2563eb;
       --accent-hover: #1d4ed8;
       --success: #059669;
-      --bg: #eef2f7;
+      --bg: #f4f6fa;
       --card: #ffffff;
-      --border: #d1dae6;
+      --border: #e2e8f0;
+      --line-2: #eef2f6;
       --text: #1e293b;
       --muted: #64748b;
       --danger: #dc2626;
-      --radius: 8px;
-      --shadow: 0 4px 24px rgba(26, 43, 74, 0.08);
+      --radius: 12px;
+      --shadow: 0 1px 2px rgba(15, 23, 42, 0.05), 0 4px 16px rgba(15, 23, 42, 0.05);
     }
 
     *, *::before, *::after { box-sizing: border-box; }
@@ -615,13 +618,222 @@
     @media (max-width: 520px) {
       .cust-fields { grid-template-columns: 1fr; }
     }
+
+    /* =====================================================================
+       Design v2 — look only. Every id and class the script relies on is kept.
+       ===================================================================== */
+    svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -3px; }
+    body { padding: 0; }
+    body:has(#resultCard:not(.hidden)) { padding-bottom: 96px; }
+
+    .container { max-width: none; background: none; box-shadow: none; border-radius: 0; overflow: visible; }
+
+    /* Top bar */
+    .topbar { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.92); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    .topbar-in { max-width: 1360px; margin: 0 auto; padding: 10px 24px; display: flex; align-items: center; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; color: var(--brand); }
+    .brand-logo, .auth-logo-tile { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: linear-gradient(135deg, var(--brand), var(--accent)); color: #fff; }
+    .brand-logo svg.i, .auth-logo-tile svg.i { stroke: #fff; }
+
+    .steps { display: flex; align-items: center; gap: 6px; margin-inline: auto; }
+    .step { display: flex; align-items: center; gap: 8px; font-size: .9rem; color: var(--muted); font-weight: 500; }
+    .step .n { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: .78rem; font-weight: 700; background: var(--line-2); color: var(--muted); }
+    .step .n .i-done { display: none; }
+    .step-sep { width: 32px; height: 2px; background: var(--border); border-radius: 2px; }
+    /* step 1 is current until a result exists; then step 2 is current */
+    .step[data-step="1"] { color: var(--text); font-weight: 700; }
+    .step[data-step="1"] .n { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--brand-soft); }
+    body:has(#resultCard:not(.hidden)) .step[data-step="1"] { color: var(--text); font-weight: 500; }
+    body:has(#resultCard:not(.hidden)) .step[data-step="1"] .n { background: var(--success); box-shadow: none; }
+    body:has(#resultCard:not(.hidden)) .step[data-step="1"] .n .i-num { display: none; }
+    body:has(#resultCard:not(.hidden)) .step[data-step="1"] .n .i-done { display: block; }
+    body:has(#resultCard:not(.hidden)) .step-sep[data-sep="1"] { background: var(--success); }
+    body:has(#resultCard:not(.hidden)) .step[data-step="2"] { color: var(--text); font-weight: 700; }
+    body:has(#resultCard:not(.hidden)) .step[data-step="2"] .n { background: var(--accent); color: #fff; box-shadow: 0 0 0 4px var(--brand-soft); }
+
+    .menu-wrap { position: relative; }
+    .user-btn { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--border); background: #fff; border-radius: 999px; cursor: pointer; font-family: inherit; font-size: .92rem; font-weight: 600; color: var(--text); }
+    .user-btn:hover { background: var(--bg); }
+    .user-btn .user-name { font-weight: 600; color: var(--text); }
+    .user-menu { position: absolute; top: calc(100% + 8px); inset-inline-end: 0; min-width: 240px; background: #fff; border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 12px 40px rgba(15,23,42,.14); padding: 6px; display: none; z-index: 60; }
+    .user-menu.open { display: block; }
+    .menu-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0; background: none; border-radius: 8px; font-family: inherit; font-size: .92rem; color: #334155; cursor: pointer; text-align: start; }
+    .menu-item:hover { background: var(--bg); }
+    .menu-item.hidden { display: none; }
+    .user-menu hr { border: 0; border-top: 1px solid var(--border); margin: 6px 0; }
+    .menu-item .pending-badge { margin-inline-start: auto; }
+
+    /* Page */
+    .content { max-width: 1360px; margin: 0 auto; padding: 24px; }
+    .page-title { margin-bottom: 16px; }
+    .page-title h1 { margin: 0; font-size: 1.5rem; color: var(--navy); }
+    .page-title p { margin: 2px 0 0; color: var(--muted); font-size: .95rem; }
+
+    .card { border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; background: var(--card); box-shadow: var(--shadow); }
+    .card h2 { margin: 0 0 14px; font-size: 1.05rem; color: var(--navy); border: 0; padding: 0; display: block; }
+
+    .upload-zone { border: 2px dashed #cbd5e1; border-radius: var(--radius); padding: 28px 20px; background: #fafbfd; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--brand-soft); }
+    .upload-icon { width: 52px; height: 52px; margin: 0 auto 10px; border-radius: 14px; display: grid; place-items: center; background: var(--brand-soft); color: var(--accent); opacity: 1; }
+    .upload-icon svg.i { width: 26px; height: 26px; }
+    .file-name { margin-top: 12px; color: var(--navy); }
+    /* once there is a result, the upload card shrinks to a single line */
+    body:has(#resultCard:not(.hidden)) .upload-card { padding: 10px 14px; }
+    body:has(#resultCard:not(.hidden)) .upload-card h2,
+    body:has(#resultCard:not(.hidden)) .upload-card .upload-icon,
+    body:has(#resultCard:not(.hidden)) .upload-card #uploadZone > div[style] { display: none; }
+    body:has(#resultCard:not(.hidden)) .upload-card #uploadZone { padding: 10px 14px; display: flex; align-items: center; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    body:has(#resultCard:not(.hidden)) .upload-card .file-name { margin: 0; }
+
+    /* Buttons */
+    .btn { padding: 10px 18px; border-radius: 10px; font-size: .95rem; }
+    .btn svg.i { width: 16px; height: 16px; }
+    .btn-success { background: linear-gradient(180deg, #16a34a, #047857); box-shadow: 0 6px 16px rgba(4,120,87,.25); }
+    .btn-success:hover:not(:disabled) { background: linear-gradient(180deg, #16a34a, #047857); box-shadow: 0 8px 22px rgba(4,120,87,.36); }
+    .btn-secondary { color: #334155; }
+    .btn-secondary:hover:not(:disabled) { background: var(--bg); border-color: #cbd5e1; }
+
+    /* Address book (collapsible) */
+    details.ab-card { padding: 0; }
+    details.ab-card > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 18px; }
+    details.ab-card > summary::-webkit-details-marker { display: none; }
+    details.ab-card > summary h2 { margin: 0; }
+    .ab-sum-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--brand-soft); color: var(--accent); flex: none; }
+    .ab-sum-hint { margin-inline-start: auto; color: var(--muted); font-size: .88rem; display: flex; align-items: center; gap: 6px; }
+    details.ab-card[open] > summary .ab-sum-hint svg { transform: rotate(180deg); }
+    .ab-body { padding: 4px 18px 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+
+    /* Summary strip */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin: 0 0 16px; background: #fff; border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+    .stat-box { flex: none; min-width: 0; display: flex; align-items: center; gap: 14px; border: 0; border-inline-start: 1px solid var(--border); border-radius: 0; box-shadow: none; text-align: start; padding: 14px 20px; background: #fff; }
+    .stat-box:first-child { border-inline-start: 0; }
+    .stat-text { display: flex; flex-direction: column; }
+    .stat-value { font-size: 1.6rem; line-height: 1.1; }
+    .stat-label { font-size: .85rem; margin: 0; }
+    .sum-ic { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; flex: none; }
+    .sum-ic.blue { background: var(--brand-soft); color: var(--accent); }
+    .sum-ic.green { background: #dcfce7; color: #047857; }
+    .sum-ic.gray { background: var(--line-2); color: var(--muted); }
+    .sum-ic.red { background: #fee2e2; color: #b91c1c; }
+    .stat-box.clickable { cursor: pointer; transition: background .15s; }
+    .stat-box.clickable:hover { background: #fef7f7; }
+    .stat-hint { margin-inline-start: auto; font-size: .8rem; color: #b91c1c; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+    /* Table card */
+    .table-card { padding: 0; overflow: hidden; }
+    .table-card .preview-header { margin: 0; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 12px; }
+    .table-card .preview-header h3 { font-size: 1.05rem; color: var(--navy); }
+    .preview-toolbar { background: none; border: 0; padding: 0; gap: 8px; }
+    .preview-toolbar .btn { height: 38px; padding: 0 14px; border-radius: 10px; font-size: .9rem; }
+    .legend { display: flex; gap: 12px; font-size: .82rem; color: var(--muted); align-items: center; margin-inline-end: 6px; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 5px; vertical-align: -1px; }
+    #problemsBtn.active, .btn-source-check.active { background: var(--brand-soft); border-color: #bcd0ff; color: var(--brand); box-shadow: none; }
+    #problemsBtn.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+
+    .preview-wrap { border-radius: var(--radius); box-shadow: none; }
+    .table-card .preview-wrap { border: 0; border-radius: 0; max-height: calc(100vh - 340px); min-height: 320px; }
+    .legend { margin-inline-start: auto; }
+    .preview-table { border-collapse: separate; border-spacing: 0; min-width: 100%; }
+    .preview-table th, .preview-table td { border: 0; border-bottom: 1px solid var(--line-2); padding: 7px 8px; }
+    .preview-table th { background: #f8fafc; color: var(--muted); font-size: .78rem; font-weight: 700; box-shadow: none; border-bottom: 1px solid var(--border); }
+    .preview-table tbody tr:hover td { background: #f8faff; }
+    .preview-table tr.row-red td { background: #fff5f5; }
+    .preview-table tr.row-yellow td { background: #fffdf3; }
+    .preview-table tr.row-red:hover td { background: #ffecec; }
+    .preview-table tr.row-yellow:hover td { background: #fff9e0; }
+    .preview-table tr.row-red td:first-child { box-shadow: inset -4px 0 0 #ef4444; }
+    .preview-table tr.row-yellow td:first-child { box-shadow: inset -4px 0 0 #f59e0b; }
+    .preview-table td.preview-delivery-days { background: transparent; }
+
+    /* the check column and the select column stay put while the table scrolls sideways */
+    .preview-flags { position: sticky; right: 0; z-index: 2; min-width: 190px; background: #fff; box-shadow: -8px 0 8px -8px rgba(15,23,42,.14); }
+    .preview-table thead th.preview-flags { z-index: 4; background: #f8fafc; }
+    .preview-table tr.row-red td.preview-flags { background: #fff5f5; }
+    .preview-table tr.row-yellow td.preview-flags { background: #fffdf3; }
+    .preview-select { right: 0; left: auto; box-shadow: none; background: #fff; }
+    .preview-select + .preview-flags { right: 52px; }
+    .preview-table tr.row-red td.preview-select { background: #fff5f5; }
+    .preview-table tr.row-yellow td.preview-select { background: #fffdf3; }
+    .preview-table tbody tr:hover td.preview-flags, .preview-table tbody tr:hover td.preview-select { background: #f8faff; }
+
+    .flag { padding: 2px 9px; border-radius: 999px; font-weight: 700; }
+    .flag-red { background: #fee2e2; color: #b91c1c; }
+    .preview-delivery-days .days-badge { border-radius: 8px; padding: 3px 10px; }
+
+    /* Action bar */
+    .actionbar { position: fixed; bottom: 0; inset-inline: 0; z-index: 60; margin: 0; background: rgba(255,255,255,.95); backdrop-filter: blur(8px); border-top: 1px solid var(--border); box-shadow: 0 -8px 24px rgba(15,23,42,.06); }
+    .actionbar-in { max-width: 1360px; margin: 0 auto; padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+    .ab-status { display: flex; align-items: center; gap: 10px; font-size: .95rem; color: #334155; }
+    .ab-status .dot { width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; box-shadow: 0 0 0 4px #fef3c7; flex: none; }
+    .ab-status.clear .dot { background: #16a34a; box-shadow: 0 0 0 4px #dcfce7; }
+    .actionbar-in #downloadBtn { margin-inline-start: auto; height: 46px; padding: 0 28px; font-size: 1.05rem; border-radius: 12px; }
+    .actionbar-in #downloadBtn svg.i { width: 22px; height: 22px; }
+    .actionbar-in .btn-ghost { height: 46px; }
+
+    .footer-note { padding: 8px 24px 24px; }
+
+    /* Sign-in screen */
+    .auth-logo { display: flex; justify-content: center; margin-bottom: 8px; }
+    .auth-logo-tile { width: 56px; height: 56px; border-radius: 16px; }
+    .auth-logo-tile svg.i { width: 28px; height: 28px; }
+    .auth-pending-icon { display: flex; justify-content: center; color: var(--accent); }
+    .auth-pending-icon svg.i { width: 40px; height: 40px; }
+    .auth-box { border: 1px solid var(--border); border-radius: 16px; }
+
+    @media (max-width: 900px) {
+      .steps { display: none; }
+      .topbar-in { padding: 8px 12px; }
+      .content { padding: 16px 12px; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat-box:nth-child(3) { border-inline-start: 0; border-top: 1px solid var(--border); }
+      .stat-box:nth-child(4) { border-top: 1px solid var(--border); }
+      .legend { display: none; }
+      .actionbar-in { padding: 8px 12px; gap: 8px; flex-wrap: wrap; }
+      .ab-status { flex: 1 1 100%; font-size: .8rem; gap: 8px; }
+      .actionbar-in #downloadBtn { flex: 1; margin: 0; height: 44px; padding: 0 14px; font-size: .95rem; white-space: nowrap; }
+      .actionbar-in #downloadBtn svg.i { width: 18px; height: 18px; }
+      .actionbar-in .btn-ghost { height: 44px; padding: 0 12px; }
+      .actionbar-in .btn-ghost span { display: none; }
+      body:has(#resultCard:not(.hidden)) { padding-bottom: 130px; }
+      .preview-wrap, .table-card .preview-wrap { max-height: 60vh; min-height: 240px; }
+      .preview-flags { min-width: 130px; }
+      .table-card .preview-header { padding: 10px 12px; }
+    }
   </style>
 </head>
 <body>
+  <!-- Icon set -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-box" viewBox="0 0 24 24"><path d="M21 8 12 3 3 8v8l9 5 9-5V8z"/><path d="m3 8 9 5 9-5M12 13v8"/></symbol>
+      <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 20h16"/></symbol>
+      <symbol id="i-up" viewBox="0 0 24 24"><path d="M12 15V4m0 0L8 8m4-4 4 4M4 20h16"/></symbol>
+      <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/><path d="M14 3v5h5"/></symbol>
+      <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v5M12 18h.01"/></symbol>
+      <symbol id="i-skip" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+      <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+      <symbol id="i-tag" viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8L3 12z"/><path d="M7.5 8.5h.01"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+      <symbol id="i-lens" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></symbol>
+      <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2 20c0-3.5 3-5.5 7-5.5s7 2 7 5.5M16 4.5a3.5 3.5 0 0 1 0 7M18 14.8c2.2.6 4 2.2 4 5.2"/></symbol>
+      <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3"/></symbol>
+      <symbol id="i-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M15 8l4 4-4 4M19 12H9"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M19 19v2H6"/></symbol>
+      <symbol id="i-chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    </defs>
+  </svg>
+
   <!-- Sign-in: covers the page until a user from an approved device is signed in -->
   <div id="authScreen" class="auth-screen">
     <div class="auth-box">
-      <div class="auth-logo">📦</div>
+      <div class="auth-logo"><span class="auth-logo-tile"><svg class="i"><use href="#i-box"/></svg></span></div>
       <h1 class="auth-title">משלוחים</h1>
       <p class="auth-sub" id="authSub">מתחבר...</p>
       <div id="authError" class="alert alert-error hidden"></div>
@@ -635,45 +847,68 @@
       </form>
 
       <div id="authPending" class="hidden">
-        <div class="auth-pending-icon">⏳</div>
+        <div class="auth-pending-icon"><svg class="i"><use href="#i-clock"/></svg></div>
         <div class="auth-note">
           המכשיר הזה ממתין לאישור של המנהל.<br>
           אחרי שהבקשה תאושר, לחץ "בדוק שוב".
         </div>
         <div class="auth-actions">
-          <button class="btn btn-primary" id="authRetry" type="button">🔄 בדוק שוב</button>
+          <button class="btn btn-primary" id="authRetry" type="button"><svg class="i"><use href="#i-refresh"/></svg> בדוק שוב</button>
           <button class="btn btn-secondary" id="authBack" type="button">חזרה</button>
         </div>
       </div>
 
       <div id="authOffline" class="hidden">
         <div class="auth-actions">
-          <button class="btn btn-primary" id="authOfflineRetry" type="button">🔄 נסה שוב</button>
+          <button class="btn btn-primary" id="authOfflineRetry" type="button"><svg class="i"><use href="#i-refresh"/></svg> נסה שוב</button>
         </div>
       </div>
     </div>
   </div>
 
   <div class="container hidden" id="appContainer">
-    <div class="header">
-      <div class="user-bar" id="userBar">
-        <span class="user-name" id="userName"></span>
-        <button class="btn btn-secondary hidden" id="usersBtn" type="button">👥 משתמשים ומכשירים <span class="pending-badge hidden" id="pendingBadge"></span></button>
-        <button class="btn btn-secondary" id="passwordBtn" type="button">🔑 החלפת סיסמה</button>
-        <button class="btn btn-secondary" id="logoutBtn" type="button">🚪 יציאה</button>
+    <header class="topbar">
+      <div class="topbar-in">
+        <div class="brand">
+          <span class="brand-logo"><svg class="i"><use href="#i-box"/></svg></span>
+          משלוחים
+        </div>
+
+        <nav class="steps" aria-label="שלבים">
+          <div class="step" data-step="1"><span class="n"><span class="i-num">1</span><svg class="i i-done" style="width:14px;height:14px;stroke-width:3"><use href="#i-check"/></svg></span>העלאת קובץ</div>
+          <div class="step-sep" data-sep="1"></div>
+          <div class="step" data-step="2"><span class="n">2</span>בדיקה והורדה</div>
+        </nav>
+
+        <div class="menu-wrap" id="userBar">
+          <button class="user-btn" id="userMenuBtn" type="button" aria-haspopup="true" aria-expanded="false">
+            <svg class="i"><use href="#i-user"/></svg>
+            <span class="user-name" id="userName"></span>
+            <svg class="i" style="width:14px;height:14px"><use href="#i-chev"/></svg>
+          </button>
+          <div class="user-menu" id="userMenu">
+            <button class="menu-item hidden" id="usersBtn" type="button"><svg class="i"><use href="#i-users"/></svg>משתמשים ומכשירים <span class="pending-badge hidden" id="pendingBadge"></span></button>
+            <button class="menu-item" id="passwordBtn" type="button"><svg class="i"><use href="#i-key"/></svg>החלפת סיסמה</button>
+            <hr>
+            <button class="menu-item" id="logoutBtn" type="button"><svg class="i"><use href="#i-out"/></svg>יציאה</button>
+          </div>
+        </div>
       </div>
-      <h1>המרת אקסל פריוריטי לחברת שליחויות</h1>
-      <p>העלה קובץ ייצוא מהפריוריטי וקבל קובץ מוכן לייבוא (OrdersTemplateDel-he)</p>
-    </div>
+    </header>
 
     <div class="content">
+      <div class="page-title">
+        <h1>המרת אקסל פריוריטי לחברת שליחויות</h1>
+        <p>העלה קובץ ייצוא מהפריוריטי וקבל קובץ מוכן לייבוא (OrdersTemplateDel-he)</p>
+      </div>
+
       <div id="alertBox" class="hidden"></div>
 
-      <div class="card">
-        <h2>1. העלאת קובץ פריוריטי</h2>
+      <div class="card upload-card">
+        <h2>העלאת קובץ פריוריטי</h2>
         <label class="upload-zone" id="uploadZone">
           <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
-          <div class="upload-icon">📄</div>
+          <div class="upload-icon"><svg class="i"><use href="#i-file"/></svg></div>
           <div>לחץ לבחירת קובץ או גרור לכאן</div>
           <div style="color:var(--muted);font-size:0.9rem;margin-top:6px">פורמטים נתמכים: xlsx, xls, csv</div>
           <div class="file-name" id="fileName"></div>
@@ -681,23 +916,28 @@
       </div>
 
       <!-- Address Book Card -->
-      <div class="card" id="addressBookCard">
-        <h2>2. חיפוש ממאגר כתובות</h2>
+      <details class="card ab-card" id="addressBookCard">
+        <summary>
+          <span class="ab-sum-ic"><svg class="i"><use href="#i-book"/></svg></span>
+          <h2>מאגר כתובות</h2>
+          <span class="ab-sum-hint">חיפוש, הוספה וניהול <svg class="i" style="width:15px;height:15px"><use href="#i-chev"/></svg></span>
+        </summary>
+        <div class="ab-body">
         <input type="file" id="abFileInput" accept=".xlsx,.xls,.csv" style="display:none">
         <div class="upload-zone hidden" id="abUploadZone" role="button" tabindex="0" style="cursor:pointer;">
-          <div class="upload-icon">📋</div>
+          <div class="upload-icon"><svg class="i"><use href="#i-book"/></svg></div>
           <div>לחץ לבחירת קובץ מאגר כתובות</div>
           <div style="color:var(--muted);font-size:0.9rem;margin-top:6px">הקובץ יישמר בשרת ויופיע לכל המשתמשים, בכל מכשיר</div>
           <div class="file-name" id="abFileName"></div>
         </div>
         <div id="abStatusNote" class="auth-note hidden" style="padding:18px 0;"></div>
         <div id="abLoadedBar" class="hidden" style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:var(--radius);flex-wrap:wrap;">
-          <span style="font-size:1.3rem;">📋</span>
+          <span class="ab-sum-ic" style="width:30px;height:30px"><svg class="i"><use href="#i-book"/></svg></span>
           <span id="abCacheInfo" style="flex:1;color:var(--navy);font-weight:600;font-size:0.95rem;"></span>
-          <button id="abNewCustBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">➕ הוסף לקוח</button>
-          <button id="abManageBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">📋 ניהול המאגר</button>
-          <label for="abFileInput" id="abUpdateBtn" class="btn btn-secondary" style="padding:8px 16px;font-size:0.9rem;cursor:pointer;margin:0;">🔄 עדכן מקובץ</label>
-          <button id="abClearCacheBtn" class="btn btn-danger" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;">🗑️ מחק מאגר</button>
+          <button id="abNewCustBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;"><svg class="i"><use href="#i-plus"/></svg> הוסף לקוח</button>
+          <button id="abManageBtn" class="btn btn-secondary" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;"><svg class="i"><use href="#i-list"/></svg> ניהול המאגר</button>
+          <label for="abFileInput" id="abUpdateBtn" class="btn btn-secondary" style="padding:8px 16px;font-size:0.9rem;cursor:pointer;margin:0;"><svg class="i"><use href="#i-refresh"/></svg> עדכן מקובץ</label>
+          <button id="abClearCacheBtn" class="btn btn-danger" type="button" style="padding:8px 16px;font-size:0.9rem;margin:0;"><svg class="i"><use href="#i-trash"/></svg> מחק מאגר</button>
         </div>
         <div id="abSearchWrap" class="hidden" style="margin-top:20px">
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
@@ -720,50 +960,63 @@
           </div>
           <div id="abSearchHint" style="text-align:center;color:var(--muted);padding:22px 0;font-size:0.97rem;">הקלד בשדה החיפוש כדי לחפש כתובות</div>
           <div class="actions">
-            <button class="btn btn-success" id="abAddBtn" type="button" disabled>➕ הוסף משלוחים נבחרים</button>
+            <button class="btn btn-success" id="abAddBtn" type="button" disabled><svg class="i"><use href="#i-plus"/></svg> הוסף משלוחים נבחרים</button>
           </div>
         </div>
-      </div>
+        </div>
+      </details>
 
-      <div class="card hidden" id="resultCard">
-        <h2>3. תוצאה</h2>
+      <div class="result hidden" id="resultCard">
         <div class="stats">
           <div class="stat-box">
-            <div class="stat-label">שורות בקלט</div>
-            <div class="stat-value" id="statInput">0</div>
+            <div class="sum-ic gray"><svg class="i"><use href="#i-list"/></svg></div>
+            <div class="stat-text">
+              <div class="stat-value" id="statInput">0</div>
+              <div class="stat-label">שורות בקלט</div>
+            </div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">משלוחים להמרה</div>
-            <div class="stat-value" id="statOutput">0</div>
+            <div class="sum-ic green"><svg class="i"><use href="#i-box"/></svg></div>
+            <div class="stat-text">
+              <div class="stat-value" id="statOutput">0</div>
+              <div class="stat-label">משלוחים להמרה</div>
+            </div>
           </div>
           <div class="stat-box">
-            <div class="stat-label">דולגו</div>
-            <div class="stat-value" id="statSkipped">0</div>
+            <div class="sum-ic gray"><svg class="i"><use href="#i-skip"/></svg></div>
+            <div class="stat-text">
+              <div class="stat-value" id="statSkipped">0</div>
+              <div class="stat-label">דולגו</div>
+            </div>
+          </div>
+          <div class="stat-box clickable" id="statProblemsBox" role="button" tabindex="0">
+            <div class="sum-ic red"><svg class="i"><use href="#i-warn"/></svg></div>
+            <div class="stat-text">
+              <div class="stat-value" id="statProblems">0</div>
+              <div class="stat-label">דורשות בדיקה</div>
+            </div>
+            <span class="stat-hint">הצג <svg class="i" style="width:14px;height:14px"><use href="#i-chev"/></svg></span>
           </div>
         </div>
 
-        <div class="actions">
-          <button class="btn btn-success" id="downloadBtn" type="button">
-            📥 הורד קובץ לחברת שליחויות
-          </button>
-        </div>
-
+        <section class="card table-card">
         <div class="preview-header">
           <h3 id="previewTitle">תצוגה מקדימה</h3>
+          <div class="legend"><span><i style="background:#ef4444"></i>חסר / שגוי</span><span><i style="background:#f59e0b"></i>כדאי לבדוק</span></div>
           <div class="preview-toolbar">
-            <button class="btn btn-secondary hidden" id="problemsBtn" type="button">⚠️ הצג רק בעייתיות</button>
-            <button class="btn btn-secondary btn-source-check" id="sourceCheckBtn" type="button">🔍 בדיקת מקור שדה</button>
-            <button class="btn btn-secondary" id="deleteRowsBtn" type="button">🗑️ מחיקת שורות</button>
-            <button class="btn btn-secondary" id="tagRowsBtn" type="button">☑️ בחר</button>
-            <button class="btn btn-danger hidden" id="confirmDeleteRowsBtn" type="button" disabled>🗑️ מחק נבחרות</button>
-            <button class="btn btn-secondary hidden" id="cancelDeleteRowsBtn" type="button">❌ ביטול</button>
-            <button class="btn btn-secondary hidden" id="tagFragileBtn" type="button">🔸 שביר</button>
-            <button class="btn btn-secondary hidden" id="tagChocolateBtn" type="button">🍫 מכיל שוקולדים</button>
-            <button class="btn btn-secondary hidden" id="cancelTagRowsBtn" type="button">❌ ביטול</button>
+            <button class="btn btn-secondary hidden" id="problemsBtn" type="button"><svg class="i"><use href="#i-warn"/></svg> הצג רק בעייתיות</button>
+            <button class="btn btn-secondary btn-source-check" id="sourceCheckBtn" type="button"><svg class="i"><use href="#i-lens"/></svg> בדיקת מקור שדה</button>
+            <button class="btn btn-secondary" id="deleteRowsBtn" type="button"><svg class="i"><use href="#i-trash"/></svg> מחיקת שורות</button>
+            <button class="btn btn-secondary" id="tagRowsBtn" type="button"><svg class="i"><use href="#i-tag"/></svg> בחר</button>
+            <button class="btn btn-danger hidden" id="confirmDeleteRowsBtn" type="button" disabled><svg class="i"><use href="#i-trash"/></svg> מחק נבחרות</button>
+            <button class="btn btn-secondary hidden" id="cancelDeleteRowsBtn" type="button"><svg class="i"><use href="#i-x"/></svg> ביטול</button>
+            <button class="btn btn-secondary hidden" id="tagFragileBtn" type="button"><svg class="i"><use href="#i-tag"/></svg> שביר</button>
+            <button class="btn btn-secondary hidden" id="tagChocolateBtn" type="button"><svg class="i"><use href="#i-tag"/></svg> מכיל שוקולדים</button>
+            <button class="btn btn-secondary hidden" id="cancelTagRowsBtn" type="button"><svg class="i"><use href="#i-x"/></svg> ביטול</button>
             <span class="selected-count hidden" id="selectedRowsCount"></span>
             <span class="selected-count hidden" id="tagRowsCount"></span>
             <button class="btn btn-secondary hidden" id="toggleColumnsBtn" type="button">
-              👁️ הצג הכל
+              <svg class="i"><use href="#i-eye"/></svg> הצג הכל
             </button>
           </div>
         </div>
@@ -772,6 +1025,18 @@
             <thead id="previewHead"></thead>
             <tbody id="previewBody"></tbody>
           </table>
+        </div>
+        </section>
+
+        <!-- Sticky bar: how many rows still need a look, and the download -->
+        <div class="actionbar">
+          <div class="actionbar-in">
+            <div class="ab-status clear" id="abStatus"></div>
+            <button class="btn btn-secondary btn-ghost" id="gotoProblemsBtn" type="button"><svg class="i"><use href="#i-warn"/></svg><span>עבור לשורות הבעייתיות</span></button>
+            <button class="btn btn-success" id="downloadBtn" type="button">
+              <svg class="i"><use href="#i-down"/></svg> הורד קובץ לחברת שליחויות
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1819,7 +2084,7 @@
 
         if (toggleColumnsBtn) {
           toggleColumnsBtn.classList.toggle('hidden', !hasHidden);
-          toggleColumnsBtn.innerHTML = showAllPreviewColumns ? '👁️ הסתר עמודות ריקות' : '👁️ הצג הכל';
+          toggleColumnsBtn.innerHTML = '<svg class="i"><use href="#i-eye"/></svg> ' + (showAllPreviewColumns ? 'הסתר עמודות ריקות' : 'הצג הכל');
         }
 
         // the widths only need fitting again when a column appeared or disappeared
@@ -1937,7 +2202,7 @@
 
       function updateSourceCheckUI() {
         sourceCheckBtn.classList.toggle('active', sourceCheckMode);
-        sourceCheckBtn.innerHTML = sourceCheckMode ? '✅ סיום בדיקת מקור' : '🔍 בדיקת מקור שדה';
+        sourceCheckBtn.innerHTML = '<svg class="i"><use href="#' + (sourceCheckMode ? 'i-check' : 'i-lens') + '"/></svg> ' + (sourceCheckMode ? 'סיום בדיקת מקור' : 'בדיקת מקור שדה');
         if (!sourceCheckMode) hideSourcePopup();
       }
 
@@ -2101,7 +2366,21 @@
         const count = rows.filter(hasProblems).length;
         problemsBtn.classList.toggle('hidden', !count && !showProblemsOnly);
         problemsBtn.classList.toggle('active', showProblemsOnly);
-        problemsBtn.textContent = showProblemsOnly ? '👁️ הצג את כל השורות' : '⚠️ הצג רק בעייתיות (' + count + ')';
+        problemsBtn.innerHTML = showProblemsOnly
+          ? '<svg class="i"><use href="#i-eye"/></svg> הצג את כל השורות'
+          : '<svg class="i"><use href="#i-warn"/></svg> הצג רק בעייתיות (' + count + ')';
+        // look only: the summary tile and the bottom bar show the same count
+        const statProblems = document.getElementById('statProblems');
+        if (statProblems) statProblems.textContent = count;
+        const abStatus = document.getElementById('abStatus');
+        if (abStatus) {
+          abStatus.classList.toggle('clear', !count);
+          abStatus.innerHTML = count
+            ? '<span class="dot"></span><span><b>' + count + ' שורות</b> עדיין דורשות בדיקה. אפשר להוריד גם כך.</span>'
+            : '<span class="dot"></span><span>הכול נראה תקין. אפשר להוריד.</span>';
+        }
+        const gotoBtn = document.getElementById('gotoProblemsBtn');
+        if (gotoBtn) gotoBtn.classList.toggle('hidden', !count);
       }
 
       async function saveRowToBook(rowIndex, btn) {
@@ -3412,7 +3691,7 @@
         me = user;
         authScreen.classList.add('hidden');
         appContainer.classList.remove('hidden');
-        userNameEl.textContent = '👤 ' + (me.name || me.username);
+        userNameEl.textContent = me.name || me.username;
         usersBtn.classList.toggle('hidden', !isAdmin());
         updatePendingBadge(me.pending);
         loadCitiesFromServer();
@@ -3437,7 +3716,7 @@
         if (!authToken || !me) return;
         try {
           me = await rpc('dlv_me', { p_token: authToken });
-          userNameEl.textContent = '👤 ' + (me.name || me.username);
+          userNameEl.textContent = me.name || me.username;
           usersBtn.classList.toggle('hidden', !isAdmin());
           updatePendingBadge(me.pending);
         } catch (err) {
@@ -3719,6 +3998,36 @@
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(function() {});
     }
+  </script>
+
+  <!-- Look only: user menu and the shortcuts to the rows that need a check -->
+  <script>
+    (function() {
+      const menuBtn = document.getElementById('userMenuBtn');
+      const menu = document.getElementById('userMenu');
+      menuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        const open = menu.classList.toggle('open');
+        menuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+      document.addEventListener('click', function() {
+        menu.classList.remove('open');
+        menuBtn.setAttribute('aria-expanded', 'false');
+      });
+
+      function showProblemRows() {
+        const btn = document.getElementById('problemsBtn');
+        if (btn && !btn.classList.contains('hidden') && !btn.classList.contains('active')) btn.click();
+        const card = document.querySelector('.table-card');
+        if (card) card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      document.getElementById('gotoProblemsBtn').addEventListener('click', showProblemRows);
+      const tile = document.getElementById('statProblemsBox');
+      tile.addEventListener('click', showProblemRows);
+      tile.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showProblemRows(); }
+      });
+    })();
   </script>
 </body>
 </html>
