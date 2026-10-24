@@ -907,6 +907,15 @@
     .table-card .preview-header { padding: 8px 16px; }
     .table-card .preview-toolbar .btn { height: 34px; }
 
+    /* ---- address book search: click or keyboard to add ---- */
+    .ab-keyhint { font-size: 0.85rem; color: var(--muted); margin: 0 2px 8px; }
+    .ab-results tbody tr[data-pos] { cursor: pointer; }
+    .ab-results tbody tr[data-pos]:hover td { background: #f1f5fd; }
+    .ab-results tbody tr.is-active td { background: #dbeafe; }
+    .ab-results tbody tr.is-active td:last-child { box-shadow: inset -3px 0 0 var(--accent); }
+    .ab-results tbody tr.is-added td { opacity: 0.55; }
+    .ab-results mark { background: #fde68a; color: inherit; border-radius: 3px; padding: 0 1px; }
+
     /* ---- address book: choose several customers, Excel round-trip ---- */
     .manage-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
     .manage-tools .btn { padding: 7px 14px; font-size: 0.88rem; margin: 0; }
@@ -1087,25 +1096,17 @@
           <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;flex-wrap:wrap">
             <input type="text" id="abSearchInput"
               style="flex:1;min-width:200px;padding:10px 14px;border:1px solid var(--border);border-radius:6px;font-family:inherit;font-size:1rem;background:#fff;color:var(--text);outline:none;transition:border 0.2s,box-shadow 0.2s;"
-              placeholder="חפש שם, עיר, רחוב, טלפון...">
+              placeholder="חפש שם, עיר, רחוב, טלפון... (למשל: אור רמה)" autocomplete="off">
             <span id="abLoadedInfo" style="color:var(--muted);font-size:0.9rem;white-space:nowrap;"></span>
           </div>
-          <div class="preview-toolbar" style="margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-            <button class="btn btn-secondary" id="abSelectAllBtn" type="button">בחר הכל הנראה</button>
-            <button class="btn btn-secondary" id="abClearSelBtn" type="button">נקה בחירה</button>
-            <button class="btn btn-secondary" id="abShowSelectedBtn" type="button">הצג מסומנים</button>
-            <span class="selected-count" id="abSelectedCount">לא נבחרו שורות</span>
-          </div>
+          <div class="ab-keyhint" id="abKeyHint" style="display:none">לחיצה על לקוח, או חצים ו-Enter, מוסיפה אותו לתצוגה המקדימה. אפשר לחפש כמה מילים, בכל סדר.</div>
           <div id="abTableWrap" class="preview-wrap" style="max-height:360px;display:none">
-            <table class="preview-table" id="abTable">
+            <table class="preview-table ab-results" id="abTable">
               <thead id="abHead"></thead>
               <tbody id="abBody"></tbody>
             </table>
           </div>
           <div id="abSearchHint" style="text-align:center;color:var(--muted);padding:22px 0;font-size:0.97rem;">הקלד בשדה החיפוש כדי לחפש כתובות</div>
-          <div class="actions">
-            <button class="btn btn-success" id="abAddBtn" type="button" disabled><svg class="i"><use href="#i-plus"/></svg> הוסף משלוחים נבחרים</button>
-          </div>
         </div>
         </div>
       </details>
@@ -2945,13 +2946,11 @@
         let abRows = [];
         let abNextIdx = 0;
         let abFilteredRows = [];
+        let abActive = 0;          // which search result the keyboard has highlighted
         let selectedAbPackages = new Map();
         let abMeta = {};
 
         let popupPendingAbIdx = null;
-        let popupPendingCb    = null;
-        let popupPendingTr    = null;
-        let popupBulkRows     = null;
 
         const abFileInput      = document.getElementById('abFileInput');
         const abUploadZone     = document.getElementById('abUploadZone');
@@ -2967,12 +2966,6 @@
         const abLoadedInfo     = document.getElementById('abLoadedInfo');
         const abHead           = document.getElementById('abHead');
         const abBody           = document.getElementById('abBody');
-        const abSelectAllBtn   = document.getElementById('abSelectAllBtn');
-        const abClearSelBtn    = document.getElementById('abClearSelBtn');
-        const abShowSelectedBtn = document.getElementById('abShowSelectedBtn');
-        const abSelectedCount  = document.getElementById('abSelectedCount');
-        let showSelectedOnly = false;
-        const abAddBtn         = document.getElementById('abAddBtn');
 
         const abPkgPopup   = document.getElementById('abPkgPopup');
         const abPkgInput   = document.getElementById('abPkgInput');
@@ -3095,12 +3088,6 @@
           manageMissingCount.textContent = missing;
         }
 
-        function updateAbSelectedCount() {
-          const n = selectedAbPackages.size;
-          abSelectedCount.textContent = n ? ('נבחרו ' + n + ' שורות') : 'לא נבחרו שורות';
-          abAddBtn.disabled = n === 0;
-        }
-
         // ---------- cartons popup ----------
         function positionPopup(anchorEl) {
           const r = anchorEl.getBoundingClientRect();
@@ -3119,75 +3106,33 @@
           });
         }
 
-        function showAbPopupFor(cb, tr, abIdx) {
-          popupPendingCb    = cb;
-          popupPendingTr    = tr;
+        function showAbPopupFor(anchorEl, abIdx) {
           popupPendingAbIdx = abIdx;
-          popupBulkRows     = null;
-          abPkgInput.value  = selectedAbPackages.has(abIdx) ? String(selectedAbPackages.get(abIdx)) : '1';
-          positionPopup(tr);
-        }
-
-        function showAbPopupBulk(rows, anchorEl) {
-          popupPendingCb    = null;
-          popupPendingTr    = null;
-          popupPendingAbIdx = null;
-          popupBulkRows     = rows;
           abPkgInput.value  = '1';
           positionPopup(anchorEl);
         }
 
+        // A customer is chosen: it goes straight into the deliveries below.
         function markSelected(abIdx, count) {
           selectedAbPackages.set(abIdx, count);
-          updateAbSelectedCount();
-          abSearchInput.value = '';
-          abSearch();
+          addSelectedToDeliveries();
           abSearchInput.focus();
         }
 
         function confirmAbPopup() {
           const count = Math.max(1, parseInt(abPkgInput.value, 10) || 1);
-          if (popupBulkRows) {
-            popupBulkRows.forEach(function(r) { selectedAbPackages.set(r._abIdx, count); });
-            hideAbPopup(false);
-            updateAbSelectedCount();
-            abSearchInput.value = '';
-            abSearch();
-            abSearchInput.focus();
-            return;
-          }
           const idx = popupPendingAbIdx;
           hideAbPopup(false);
-          markSelected(idx, count);
+          if (idx != null) markSelected(idx, count);
         }
 
-        function hideAbPopup(cancelled) {
-          if (cancelled && popupPendingCb && !selectedAbPackages.has(popupPendingAbIdx)) {
-            popupPendingCb.checked = false;
-            if (popupPendingTr) popupPendingTr.style.background = '';
-          }
+        // refocus: back to the search box, ready for the next customer
+        function hideAbPopup(refocus) {
           abPkgPopup.classList.add('hidden');
-          popupPendingAbIdx = null; popupPendingCb = null; popupPendingTr = null; popupBulkRows = null;
+          popupPendingAbIdx = null;
+          if (refocus) abSearchInput.focus();
         }
 
-        function setRowBadge(tr, count) {
-          const checkTd = tr.querySelector('.preview-select');
-          if (!checkTd) return;
-          let badge = checkTd.querySelector('.ab-pkg-badge');
-          if (!badge) {
-            badge = document.createElement('div');
-            badge.className = 'ab-pkg-badge';
-            badge.style.cssText = 'font-size:0.7rem;font-weight:700;color:#fff;background:var(--accent);border-radius:8px;padding:1px 6px;margin-top:3px;text-align:center;display:inline-block;line-height:1.4;cursor:default;';
-            badge.title = 'מספר קרטונים';
-            checkTd.appendChild(badge);
-          }
-          badge.textContent = count;
-        }
-
-        function removeRowBadge(tr) {
-          const b = tr && tr.querySelector('.ab-pkg-badge');
-          if (b) b.remove();
-        }
 
         abPkgConfirm.addEventListener('click', confirmAbPopup);
         abPkgCancel.addEventListener('click',  function() { hideAbPopup(true); });
@@ -3199,7 +3144,7 @@
         abPkgInput.addEventListener('blur',  function() { abPkgInput.style.borderColor = 'var(--border)'; abPkgInput.style.boxShadow = ''; });
         document.addEventListener('mousedown', function(e) {
           if (abPkgPopup.classList.contains('hidden')) return;
-          if (!abPkgPopup.contains(e.target)) hideAbPopup(true);
+          if (!abPkgPopup.contains(e.target)) hideAbPopup(false);
         });
 
         // ---------- customer window: complete on selection, add, edit ----------
@@ -3311,78 +3256,71 @@
         custModal.addEventListener('click', function(e) { if (e.target === custModal) closeCustomer(true); });
         custModal.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeCustomer(true); });
 
-        // ---------- search table ----------
-        function renderAbTable(filtered) {
-          abFilteredRows = filtered;
-          const allVisible = filtered.length > 0 && filtered.every(function(r) { return selectedAbPackages.has(r._abIdx); });
-          let headHtml = '<th class="preview-select"><input type="checkbox" id="abSelectAllCheck"' + (allVisible ? ' checked' : '') + ' title="בחר הכל הנראה"></th>';
-          headHtml += '<th class="preview-editable"></th>';
+        // ---------- search ----------
+        const AB_RESULT_LIMIT = 50;
+
+        // A customer already in the deliveries below (taken from the book) cannot be chosen twice.
+        function isAddedToDeliveries(row) {
+          return !!(convertResult && convertResult.rowMeta && convertResult.rowMeta.some(function(m) { return m && m.bookRowId === row._id; }));
+        }
+
+        // The text with every searched word marked.
+        function abMark(value, words) {
+          const text = String(value || '');
+          const lower = text.toLowerCase();
+          const hit = new Array(text.length).fill(false);
+          words.forEach(function(w) {
+            if (!w) return;
+            let i = lower.indexOf(w);
+            while (i >= 0) {
+              for (let k = i; k < i + w.length; k++) hit[k] = true;
+              i = lower.indexOf(w, i + w.length);
+            }
+          });
+          let html = '';
+          let open = false;
+          for (let k = 0; k < text.length; k++) {
+            if (hit[k] && !open) { html += '<mark>'; open = true; }
+            if (!hit[k] && open) { html += '</mark>'; open = false; }
+            html += abEscapeHtml(text.charAt(k));
+          }
+          return html + (open ? '</mark>' : '');
+        }
+
+        function renderAbTable(results, words) {
+          const shown = results.slice(0, AB_RESULT_LIMIT);
+          abFilteredRows = shown;
+          if (abActive >= shown.length) abActive = shown.length - 1;
+          if (abActive < 0) abActive = 0;
+          let headHtml = '<th class="preview-editable"></th>';
           AB_DISPLAY_COLUMNS.forEach(function(col) {
             headHtml += '<th class="preview-editable" data-column="' + abEscapeHtml(col) + '">' + abEscapeHtml(col) + '</th>';
           });
           abHead.innerHTML = '<tr>' + headHtml + '</tr>';
 
-          const sac = document.getElementById('abSelectAllCheck');
-          if (sac) {
-            sac.addEventListener('change', function() {
-              if (sac.checked) {
-                sac.checked = false;
-                showAbPopupBulk(filtered.slice(), sac);
-              } else {
-                filtered.forEach(function(r) { selectedAbPackages.delete(r._abIdx); });
-                abBody.querySelectorAll('tr').forEach(function(tr) {
-                  const cb = tr.querySelector('input.ab-row-check');
-                  if (cb) {
-                    const idx = parseInt(cb.dataset.abIndex, 10);
-                    if (!selectedAbPackages.has(idx)) { cb.checked = false; tr.style.background = ''; removeRowBadge(tr); }
-                  }
-                });
-                updateAbSelectedCount();
-              }
-            });
-          }
-
           abBody.innerHTML = '';
-          if (!filtered.length) {
+          if (!shown.length) {
             const tr = document.createElement('tr');
             const td = document.createElement('td');
-            td.colSpan = AB_DISPLAY_COLUMNS.length + 2;
+            td.colSpan = AB_DISPLAY_COLUMNS.length + 1;
             td.style.cssText = 'text-align:center;color:var(--muted);padding:24px;';
             td.textContent = 'לא נמצאו תוצאות';
             tr.appendChild(td); abBody.appendChild(tr);
-            updateAbSelectedCount(); return;
+            return;
           }
 
-          filtered.forEach(function(row) {
-            const abIdx    = row._abIdx;
-            const pkgCount = selectedAbPackages.get(abIdx);
-            const isChecked = pkgCount !== undefined;
+          shown.forEach(function(row, i) {
             const missing = missingFields(row);
+            const added = isAddedToDeliveries(row);
             const tr = document.createElement('tr');
-            if (isChecked) tr.style.background = '#eff6ff';
-
-            const checkTd = document.createElement('td');
-            checkTd.className = 'preview-select';
-            const cb = document.createElement('input');
-            cb.type = 'checkbox'; cb.className = 'ab-row-check';
-            cb.dataset.abIndex = String(abIdx);
-            cb.checked = isChecked;
-            cb.addEventListener('change', function() {
-              if (cb.checked) {
-                tr.style.background = '#eff6ff';
-                if (missingFields(row).length) openCustomer('select', row, { cb: cb, tr: tr });
-                else showAbPopupFor(cb, tr, abIdx);
-              } else {
-                selectedAbPackages.delete(abIdx); tr.style.background = ''; removeRowBadge(tr); updateAbSelectedCount();
-              }
-            });
-            checkTd.appendChild(cb);
-            if (isChecked) { requestAnimationFrame(function() { setRowBadge(tr, pkgCount); }); }
-            tr.appendChild(checkTd);
+            tr.dataset.pos = String(i);
+            if (i === abActive) tr.classList.add('is-active');
+            if (added) tr.classList.add('is-added');
 
             const flagTd = document.createElement('td');
             flagTd.className = 'preview-editable';
-            if (missing.length) flagTd.innerHTML = '<span class="tag tag-pending" title="חסר: ' + abEscapeHtml(missing.join(', ')) + '">חסר ' + abEscapeHtml(missing.join(', ')) + '</span>';
+            if (added) flagTd.innerHTML = '<span class="tag tag-ok">כבר נוסף</span>';
+            else if (missing.length) flagTd.innerHTML = '<span class="tag tag-pending" title="חסר: ' + abEscapeHtml(missing.join(', ')) + '">חסר ' + abEscapeHtml(missing.join(', ')) + '</span>';
             tr.appendChild(flagTd);
 
             AB_DISPLAY_COLUMNS.forEach(function(col) {
@@ -3390,42 +3328,91 @@
               td.className = 'preview-editable';
               td.dataset.column = col;
               td.style.whiteSpace = 'nowrap';
-              td.textContent = row[col] || '';
+              td.innerHTML = abMark(row[col], words);
               tr.appendChild(td);
             });
             abBody.appendChild(tr);
           });
-          updateAbSelectedCount();
+          if (results.length > shown.length) {
+            const tr = document.createElement('tr');
+            const td = document.createElement('td');
+            td.colSpan = AB_DISPLAY_COLUMNS.length + 1;
+            td.style.cssText = 'text-align:center;color:var(--muted);padding:10px;font-size:0.85rem;';
+            td.textContent = 'מוצגים ' + shown.length + ' מתוך ' + results.length + '. המשך להקליד כדי לצמצם.';
+            tr.appendChild(td); abBody.appendChild(tr);
+          }
         }
 
+        // Every word of the query must be somewhere in the customer, in any column and any order.
         function rowMatches(row, q) {
-          return DELIVERY_COLUMNS.some(function(col) {
-            return abNorm(row[col]).toLowerCase().indexOf(q) >= 0;
-          });
+          const text = DELIVERY_COLUMNS.map(function(col) { return abNorm(row[col]).toLowerCase(); }).join(' ');
+          return q.split(' ').every(function(w) { return !w || text.indexOf(w) >= 0; });
         }
 
         function abSearch() {
           const q = abNorm(abSearchInput.value).toLowerCase();
           const abTableWrap  = document.getElementById('abTableWrap');
           const abSearchHint = document.getElementById('abSearchHint');
-          const hasQuery = !!q || showSelectedOnly;
+          const abKeyHint    = document.getElementById('abKeyHint');
 
-          if (!hasQuery) {
+          if (!q) {
+            abFilteredRows = [];
             abTableWrap.style.display = 'none';
+            abKeyHint.style.display = 'none';
             abSearchHint.style.display = '';
             return;
           }
 
           abTableWrap.style.display = '';
+          abKeyHint.style.display = '';
           abSearchHint.style.display = 'none';
-
-          let results = abRows.slice();
-          if (q) results = results.filter(function(row) { return rowMatches(row, q); });
-          if (showSelectedOnly) {
-            results = results.filter(function(row) { return selectedAbPackages.has(row._abIdx); });
-          }
-          renderAbTable(results);
+          renderAbTable(abRows.filter(function(row) { return rowMatches(row, q); }), q.split(' '));
         }
+
+        // Choosing a customer: already below, missing details, or the cartons question first.
+        function chooseRow(row, anchorEl) {
+          if (!row) return;
+          if (isAddedToDeliveries(row)) {
+            showAlert((row['שם פרטי'] || 'הלקוח') + ' כבר נבחר והוסף לתצוגה המקדימה.', 'info');
+            return;
+          }
+          if (missingFields(row).length) { openCustomer('select', row, {}); return; }
+          showAbPopupFor(anchorEl || abSearchInput, row._abIdx);
+        }
+
+        function setAbActive(pos) {
+          abActive = pos;
+          abBody.querySelectorAll('tr[data-pos]').forEach(function(tr) {
+            const on = parseInt(tr.dataset.pos, 10) === pos;
+            tr.classList.toggle('is-active', on);
+            if (on) tr.scrollIntoView({ block: 'nearest' });
+          });
+        }
+
+        abBody.addEventListener('click', function(e) {
+          const tr = e.target.closest('tr[data-pos]');
+          if (!tr) return;
+          const pos = parseInt(tr.dataset.pos, 10);
+          setAbActive(pos);
+          chooseRow(abFilteredRows[pos], tr);
+        });
+        abSearchInput.addEventListener('keydown', function(e) {
+          if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            if (!abFilteredRows.length) return;
+            e.preventDefault();
+            const n = abFilteredRows.length;
+            setAbActive((abActive + (e.key === 'ArrowDown' ? 1 : n - 1)) % n);
+          } else if (e.key === 'Enter') {
+            if (!abFilteredRows.length) return;
+            e.preventDefault();
+            chooseRow(abFilteredRows[abActive], abBody.querySelector('tr.is-active'));
+          } else if (e.key === 'Escape') {
+            abSearchInput.value = '';
+            abActive = 0;
+            abSearch();
+          }
+        });
+
 
         // ---------- manage the list ----------
         // The customers the search and the "missing details" box leave.
@@ -3900,7 +3887,9 @@
           updateRowSelectUI(); updateSourceCheckUI(); hideSourcePopup();
           renderPreview(convertResult.rows);
 
-          showAlert('נוספו ' + selectedRows.length + ' משלוחים מהמאגר. סה"כ ' + convertResult.rows.length + ' משלוחים.', 'success');
+          showAlert(selectedRows.length === 1
+            ? 'נוסף לתצוגה המקדימה: ' + (selectedRows[0].row['שם פרטי'] || 'לקוח') + '. סה"כ ' + convertResult.rows.length + ' משלוחים.'
+            : 'נוספו ' + selectedRows.length + ' משלוחים מהמאגר. סה"כ ' + convertResult.rows.length + ' משלוחים.', 'success');
 
           selectedAbPackages.clear();
           abSearchInput.value = '';
@@ -3919,31 +3908,7 @@
           if (e.dataTransfer.files[0]) abHandleFile(e.dataTransfer.files[0]);
         });
 
-        abSearchInput.addEventListener('input', abSearch);
-        abSelectAllBtn.addEventListener('click', function() {
-          if (!abFilteredRows.length) return;
-          showAbPopupBulk(abFilteredRows.slice(), abSelectAllBtn);
-        });
-        abShowSelectedBtn.addEventListener('click', function() {
-          showSelectedOnly = !showSelectedOnly;
-          abShowSelectedBtn.textContent = showSelectedOnly ? 'הצג הכל' : 'הצג מסומנים';
-          abShowSelectedBtn.style.fontWeight = showSelectedOnly ? '700' : '';
-          abSearch();
-        });
-        abClearSelBtn.addEventListener('click', function() {
-          selectedAbPackages.clear();
-          showSelectedOnly = false;
-          abShowSelectedBtn.textContent = 'הצג מסומנים';
-          abShowSelectedBtn.style.fontWeight = '';
-          abBody.querySelectorAll('tr').forEach(function(tr) {
-            const cb = tr.querySelector('input.ab-row-check');
-            if (cb) { cb.checked = false; tr.style.background = ''; }
-            removeRowBadge(tr);
-          });
-          updateAbSelectedCount();
-          abSearch();
-        });
-        abAddBtn.addEventListener('click', addSelectedToDeliveries);
+        abSearchInput.addEventListener('input', function() { abActive = 0; abSearch(); });
         abClearCacheBtn.addEventListener('click', async function() {
           if (!window.confirm('למחוק את כל מאגר הכתובות מהשרת? הוא יימחק לכל המשתמשים, כולל לקוחות שנוספו ותיקונים שנעשו.')) return;
           try {
