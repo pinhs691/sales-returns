@@ -906,6 +906,36 @@
     .preview-flags .flag { margin: 1px 0; }
     .table-card .preview-header { padding: 8px 16px; }
     .table-card .preview-toolbar .btn { height: 34px; }
+
+    /* ---- address book: choose several customers, Excel round-trip ---- */
+    .manage-tools { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .manage-tools .btn { padding: 7px 14px; font-size: 0.88rem; margin: 0; }
+    .manage-tools .spacer { flex: 1; }
+    .manage-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .manage-table .sel-col { display: none; width: 34px; text-align: center; }
+    .manage-table.select-mode .sel-col { display: table-cell; }
+    .manage-table .sel-col input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent); }
+    .manage-table.select-mode .manage-actions { display: none; }
+    .manage-table.select-mode tbody tr { cursor: pointer; }
+    .manage-table tbody tr.is-picked td { background: #eff6ff; }
+    .xls-sum { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .xls-stat { flex: 1; min-width: 120px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; font-size: 0.85rem; color: var(--muted); }
+    .xls-stat b { display: block; font-size: 1.4rem; line-height: 1.2; color: var(--navy); }
+    .xls-stat.is-new b { color: #047857; }
+    .xls-note { font-size: 0.85rem; color: var(--muted); margin: 0 0 10px; }
+    .xls-list { max-height: 46vh; overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+    .xls-item { display: flex; gap: 12px; padding: 7px 12px; border-bottom: 1px solid var(--border); font-size: 0.88rem; align-items: baseline; }
+    .xls-item:last-child { border-bottom: 0; }
+    .xls-who { flex: 0 0 150px; font-weight: 600; color: var(--navy); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .xls-chs { flex: 1; min-width: 0; }
+    .xls-ch { display: flex; gap: 6px; flex-wrap: wrap; align-items: baseline; }
+    .xls-f { color: var(--muted); }
+    .xls-old { color: var(--muted); text-decoration: line-through; }
+    .xls-old.is-empty { text-decoration: none; font-style: italic; }
+    .xls-new { font-weight: 600; direction: auto; }
+    .xls-ch.is-over .xls-new { color: #b45309; }
+    .xls-more { padding: 8px 12px; color: var(--muted); font-size: 0.85rem; text-align: center; }
+    @media (max-width: 520px) { .xls-item { flex-direction: column; gap: 2px; } .xls-who { flex: none; } }
   </style>
 </head>
 <body>
@@ -1253,14 +1283,45 @@
         <label class="field-check" style="margin:0;"><input type="checkbox" id="abManageMissing"> רק חסרי פרטים (<span id="abManageMissingCount">0</span>)</label>
         <span id="abManageInfo" class="selected-count"></span>
       </div>
-      <div class="preview-wrap" style="max-height:60vh;">
-        <table class="preview-table manage-table">
-          <thead><tr><th></th><th>שם</th><th>טלפון</th><th>עיר</th><th>רחוב</th><th>מספר בית</th><th>מצב</th></tr></thead>
+      <div class="manage-tools">
+        <button class="btn btn-secondary" id="abManageSelectBtn" type="button"><svg class="i"><use href="#i-check"/></svg> בחר</button>
+        <span class="manage-group hidden" id="abManageSelBar">
+          <span class="selected-count" id="abManageSelCount">נבחרו 0</span>
+          <button class="btn btn-danger" id="abManageDelSel" type="button" disabled><svg class="i"><use href="#i-trash"/></svg> מחק נבחרים</button>
+          <button class="btn btn-secondary" id="abManageSelCancel" type="button">ביטול</button>
+        </span>
+        <span class="spacer"></span>
+        <span class="manage-group hidden" id="abManageXls">
+          <button class="btn btn-secondary" id="abManageXlsDown" type="button"><svg class="i"><use href="#i-down"/></svg> הורד לאקסל</button>
+          <button class="btn btn-secondary" id="abManageXlsUp" type="button"><svg class="i"><use href="#i-up"/></svg> עדכן מאקסל</button>
+          <input type="file" id="abManageXlsInput" accept=".xlsx,.xls,.csv" style="display:none">
+        </span>
+      </div>
+      <div class="preview-wrap" style="max-height:56vh;">
+        <table class="preview-table manage-table" id="abManageTable">
+          <thead><tr><th class="sel-col"><input type="checkbox" id="abManageSelAll" title="בחר את כל התוצאות" aria-label="בחר את כל התוצאות"></th><th></th><th>שם</th><th>טלפון</th><th>עיר</th><th>רחוב</th><th>מספר בית</th><th>מצב</th></tr></thead>
           <tbody id="abManageBody"></tbody>
         </table>
       </div>
       <div style="text-align:center;margin-top:12px;">
         <button class="modal-cancel" id="abManageClose" type="button">סגור</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Address book: what an Excel file would change, shown before anything is saved -->
+  <div id="abXlsModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="abXlsTitle">
+    <div class="modal-box modal-wide modal-xwide">
+      <div class="modal-head">
+        <div class="modal-title" id="abXlsTitle">עדכון המאגר מאקסל</div>
+        <button class="modal-x" type="button" data-close="abXlsCancel" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
+      <div class="xls-sum" id="abXlsSum"></div>
+      <p class="xls-note" id="abXlsNote"></p>
+      <div class="xls-list" id="abXlsList"></div>
+      <div style="display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="abXlsApply" type="button"><svg class="i"><use href="#i-check"/></svg> <span id="abXlsApplyText">החל</span></button>
+        <button class="modal-cancel" id="abXlsCancel" type="button">ביטול</button>
       </div>
     </div>
   </div>
@@ -2114,13 +2175,13 @@
             });
           };
           if (!deliveryRow['רחוב']) fill(['רחוב', 'מספר בית', 'קומה', 'דירה']);
-          fill(['עיר', 'טלפון']);
+          fill(['עיר', 'טלפון', 'טלפון יעד 2', 'הערות מיקום']);
         }
 
         deliveryRow['מספר חבילות'] = settings.packageCount;
         sources['מספר חבילות'] = makeSourceInfo('ברירת מחדל', settings.packageCount);
         if (settings.palletCount) { deliveryRow['מספר משטחים'] = settings.palletCount; sources['מספר משטחים'] = makeSourceInfo('ברירת מחדל', settings.palletCount); }
-        if (settings.locationNotes) { deliveryRow['הערות מיקום'] = settings.locationNotes; sources['הערות מיקום'] = makeSourceInfo('ברירת מחדל', settings.locationNotes); }
+        if (settings.locationNotes && !deliveryRow['הערות מיקום']) { deliveryRow['הערות מיקום'] = settings.locationNotes; sources['הערות מיקום'] = makeSourceInfo('ברירת מחדל', settings.locationNotes); }
         if (settings.greeting) { deliveryRow['ברכה'] = settings.greeting; sources['ברכה'] = makeSourceInfo('ברירת מחדל', settings.greeting); }
 
         rows.push(deliveryRow);
@@ -2450,8 +2511,8 @@
       }
 
       // ---------- flags: what still needs a look in each row ----------
-      // The address-book fields an order can save back for its customer (orders without a delivery address only).
-      const BOOK_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח'];
+      // The address-book fields: what a customer added from the book can save back, and what an order fills in from the book.
+      const BOOK_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח', 'טלפון יעד 2', 'הערות מיקום'];
       let showProblemsOnly = false;
 
       function rowMetaAt(rowIndex) {
@@ -2476,10 +2537,14 @@
         if (meta.fromBook && meta.fromBook.length) {
           html += '<span class="flag flag-book" title="' + escapeHtml(meta.fromBook.join(', ')) + '">הושלם מהמאגר</span>';
         }
-        if (meta.bookDirty) {
-          html += meta.bookSaved
-            ? '<span class="flag flag-ok">✓ נשמר במאגר</span>'
-            : '<button type="button" class="btn btn-secondary save-book-btn" data-row-index="' + rowIndex + '"><svg class="i"><use href="#i-save"/></svg> שמור במאגר</button>';
+        // Only a customer added from the address book can be saved back, and only once something differs from the book.
+        if (meta.bookRowId && meta.bookBase) {
+          const changed = BOOK_FIELDS.some(function(col) { return String(row[col] || '').trim() !== (meta.bookBase[col] || ''); });
+          if (changed) {
+            html += '<button type="button" class="btn btn-secondary save-book-btn" data-row-index="' + rowIndex + '"><svg class="i"><use href="#i-save"/></svg> שמור במאגר</button>';
+          } else if (meta.bookSaved) {
+            html += '<span class="flag flag-ok">✓ נשמר במאגר</span>';
+          }
         }
         tr.querySelector('td.preview-flags').innerHTML = html || '<span class="flag flag-ok">✓</span>';
       }
@@ -2509,21 +2574,18 @@
       async function saveRowToBook(rowIndex, btn) {
         const row = convertResult && convertResult.rows[rowIndex];
         const meta = rowMetaAt(rowIndex);
-        if (!row || !meta.custId) return;
-        const data = {};
-        BOOK_FIELDS.forEach(function(col) {
-          const v = String(row[col] || '').trim();
-          if (v) data[col] = v;
-        });
+        if (!row || !meta.bookRowId) return;
+        const fields = {};
+        BOOK_FIELDS.forEach(function(col) { fields[col] = String(row[col] || '').trim(); });
         btn.disabled = true;
         try {
-          const saved = await rpc('dlv_ab_save_by_cust', { p_token: authToken, p_cust: meta.custId, p_data: data });
-          addressBook.upsert(saved);
+          await addressBook.saveFields(meta.bookRowId, fields);
         } catch (err) {
           btn.disabled = false;
           showAlert('לא נשמר במאגר: ' + serverErrorText(err), 'error');
           return;
         }
+        meta.bookBase = fields;
         meta.bookSaved = true;
         paintRowFlags(rowIndex);
         showAlert('הפרטים של ' + (row['שם פרטי'] || 'הלקוח') + ' נשמרו במאגר, ויושלמו בהזמנה הבאה שלו.', 'success');
@@ -2622,12 +2684,6 @@
                 }
                 if (col === 'עיר') {
                   updateRowDeliveryDays(rowIndex, input.value);
-                }
-                // an order without a delivery address can save what was fixed here for its customer
-                const meta = rowMetaAt(rowIndex);
-                if (BOOK_FIELDS.indexOf(col) >= 0 && meta.custId && !meta.ship) {
-                  meta.bookDirty = true;
-                  meta.bookSaved = false;
                 }
                 paintRowFlags(rowIndex);
                 updateProblemsButton();
@@ -2881,7 +2937,7 @@
           'קומה', 'דירה', 'הערות משלוח'
         ];
         // What the customer window shows, and what a customer needs before a courier can reach them.
-        const CUST_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח'];
+        const CUST_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח', 'טלפון יעד 2', 'הערות מיקום'];
         const REQUIRED_FIELDS = ['טלפון', 'עיר', 'רחוב'];
         const CUST_ID_HEADERS = ['מס. לקוח', 'מס לקוח', 'מספר לקוח', "מס' לקוח"];
         const MANAGE_LIMIT = 200;
@@ -2989,6 +3045,18 @@
             abRows.push(rowFromServer(item));
           }
           refreshAbInfo();
+        };
+
+        // Saves what was fixed in a delivery row back onto the customer it came from (fields: {column: value}, empty clears).
+        addressBook.saveFields = async function(id, fields) {
+          const row = abRows.find(function(r) { return r._id === id; });
+          if (!row) { const err = new Error('NOT_FOUND'); err.code = 'NOT_FOUND'; throw err; }
+          const data = rowData(row);
+          Object.keys(fields).forEach(function(col) {
+            if (fields[col]) data[col] = fields[col]; else delete data[col];
+          });
+          const saved = await rpc('dlv_ab_row_save', { p_token: authToken, p_id: id, p_data: data });
+          addressBook.upsert({ id: saved.id, d: saved.d });
         };
 
         function rowData(row) {
@@ -3150,11 +3218,11 @@
             : mode === 'add' ? 'הלקוח יישמר בשרת ויופיע לכל המשתמשים.' : 'השינויים יישמרו בשרת לכל המשתמשים.';
           custFieldsWrap.innerHTML = CUST_FIELDS.map(function(col) {
             const isMissing = mode !== 'add' && missing.indexOf(col) >= 0;
-            const wide = col === 'הערות משלוח' || col === 'שם פרטי';
+            const wide = col === 'הערות משלוח' || col === 'הערות מיקום' || col === 'שם פרטי';
             return '<label class="field' + (isMissing ? ' field-missing' : '') + (wide ? ' field-wide' : '') + '">' +
               '<span>' + abEscapeHtml(col === 'שם פרטי' ? 'שם' : col) + (isMissing ? ' (חסר)' : '') + '</span>' +
               '<input data-col="' + abEscapeHtml(col) + '" value="' + abEscapeHtml(row ? row[col] : '') + '"' +
-              (col === 'טלפון' ? ' inputmode="tel"' : '') + '></label>';
+              (col === 'טלפון' || col === 'טלפון יעד 2' ? ' inputmode="tel"' : '') + '></label>';
           }).join('');
           custPkgField.classList.toggle('hidden', mode !== 'select');
           custPkgInput.value = mode === 'select' && selectedAbPackages.has(row._abIdx) ? String(selectedAbPackages.get(row._abIdx)) : '1';
@@ -3360,22 +3428,66 @@
         }
 
         // ---------- manage the list ----------
-        function renderManage() {
+        // The customers the search and the "missing details" box leave.
+        function manageFiltered() {
           const q = abNorm(manageSearch.value).toLowerCase();
           let list = abRows;
           if (manageMissing.checked) list = list.filter(function(r) { return missingFields(r).length; });
           if (q) list = list.filter(function(r) { return rowMatches(r, q); });
+          return list;
+        }
+
+        // Choosing several customers to remove together: manageSelected holds their _abIdx.
+        let manageSelectMode = false;
+        const manageSelected = new Set();
+        let manageShown = [];
+        const manageTable     = document.getElementById('abManageTable');
+        const manageSelectBtn = document.getElementById('abManageSelectBtn');
+        const manageSelBar    = document.getElementById('abManageSelBar');
+        const manageSelCount  = document.getElementById('abManageSelCount');
+        const manageDelSel    = document.getElementById('abManageDelSel');
+        const manageSelCancel = document.getElementById('abManageSelCancel');
+        const manageSelAll    = document.getElementById('abManageSelAll');
+        const manageXls       = document.getElementById('abManageXls');
+
+        function updateManageSel() {
+          const n = manageSelected.size;
+          const hidden = n - manageShown.filter(function(r) { return manageSelected.has(r._abIdx); }).length;
+          manageSelCount.textContent = 'נבחרו ' + n + (hidden > 0 ? ' (מתוכם ' + hidden + ' לא מוצגים כרגע)' : '');
+          manageDelSel.disabled = !n;
+          const list = manageFiltered();
+          const picked = list.filter(function(r) { return manageSelected.has(r._abIdx); }).length;
+          manageSelAll.checked = list.length > 0 && picked === list.length;
+          manageSelAll.indeterminate = picked > 0 && picked < list.length;
+        }
+
+        function setManageSelectMode(on) {
+          manageSelectMode = !!on;
+          manageSelected.clear();
+          manageTable.classList.toggle('select-mode', manageSelectMode);
+          manageSelectBtn.classList.toggle('hidden', manageSelectMode);
+          manageSelBar.classList.toggle('hidden', !manageSelectMode);
+          manageXls.classList.toggle('hidden', manageSelectMode || !canExcel());
+          renderManage();
+        }
+
+        function renderManage() {
+          const list = manageFiltered();
           const shown = list.slice(0, MANAGE_LIMIT);
+          manageShown = shown;
           manageInfo.textContent = list.length > MANAGE_LIMIT
             ? 'מוצגים ' + MANAGE_LIMIT + ' מתוך ' + list.length + '. חפש כדי לצמצם.'
             : list.length + ' לקוחות';
           if (!shown.length) {
-            manageBody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:24px;">לא נמצאו לקוחות</td></tr>';
+            manageBody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:24px;">לא נמצאו לקוחות</td></tr>';
+            updateManageSel();
             return;
           }
           manageBody.innerHTML = shown.map(function(r) {
             const missing = missingFields(r);
-            return '<tr>' +
+            const picked = manageSelected.has(r._abIdx);
+            return '<tr data-idx="' + r._abIdx + '"' + (picked ? ' class="is-picked"' : '') + '>' +
+              '<td class="sel-col"><input type="checkbox" class="manage-pick"' + (picked ? ' checked' : '') + ' aria-label="בחר"></td>' +
               '<td><div class="manage-actions">' +
                 '<button class="btn btn-secondary" type="button" data-act="edit" data-idx="' + r._abIdx + '"><svg class="i"><use href="#i-edit"/></svg> עריכה</button>' +
                 '<button class="btn btn-danger" type="button" data-act="delete" data-idx="' + r._abIdx + '" title="מחיקה"><svg class="i"><use href="#i-trash"/></svg></button>' +
@@ -3388,17 +3500,29 @@
               '<td>' + (missing.length ? '<span class="tag tag-pending">חסר ' + abEscapeHtml(missing.join(', ')) + '</span>' : '<span class="tag tag-ok">מלא</span>') + '</td>' +
             '</tr>';
           }).join('');
+          updateManageSel();
         }
 
         function openManage() {
           manageSearch.value = '';
           manageMissing.checked = false;
-          renderManage();
+          setManageSelectMode(false);
           manageModal.classList.remove('hidden');
           manageSearch.focus();
         }
 
         manageBody.addEventListener('click', async function(e) {
+          if (manageSelectMode) {
+            const tr = e.target.closest('tr[data-idx]');
+            if (!tr) return;
+            const cb = tr.querySelector('.manage-pick');
+            if (e.target !== cb) cb.checked = !cb.checked;
+            const idx = parseInt(tr.dataset.idx, 10);
+            if (cb.checked) manageSelected.add(idx); else manageSelected.delete(idx);
+            tr.classList.toggle('is-picked', cb.checked);
+            updateManageSel();
+            return;
+          }
           const btn = e.target.closest('button[data-act]');
           if (!btn) return;
           const row = findRow(parseInt(btn.dataset.idx, 10));
@@ -3427,6 +3551,224 @@
         manageAddBtn.addEventListener('click', function() { openCustomer('add', null); });
         abManageBtn.addEventListener('click', openManage);
         abNewCustBtn.addEventListener('click', function() { openCustomer('add', null); });
+
+        manageSelectBtn.addEventListener('click', function() { setManageSelectMode(true); });
+        manageSelCancel.addEventListener('click', function() { setManageSelectMode(false); });
+        manageSelAll.addEventListener('change', function() {
+          manageFiltered().forEach(function(r) {
+            if (manageSelAll.checked) manageSelected.add(r._abIdx); else manageSelected.delete(r._abIdx);
+          });
+          renderManage();
+        });
+        manageDelSel.addEventListener('click', async function() {
+          const rows = Array.from(manageSelected).map(findRow).filter(Boolean);
+          if (!rows.length) return;
+          if (!window.confirm('למחוק ' + rows.length + ' לקוחות מהמאגר? הם יימחקו לכל המשתמשים.')) return;
+          manageDelSel.disabled = true;
+          try {
+            await rpc('dlv_ab_rows_delete', { p_token: authToken, p_ids: rows.map(function(r) { return r._id; }) });
+          } catch (err) {
+            showAlert('הלקוחות לא נמחקו: ' + serverErrorText(err), 'error');
+            updateManageSel();
+            return;
+          }
+          const gone = new Set(rows);
+          abRows = abRows.filter(function(r) { return !gone.has(r); });
+          rows.forEach(function(r) { selectedAbPackages.delete(r._abIdx); });
+          setManageSelectMode(false);
+          refreshAbInfo();
+          abSearch();
+          showAlert('נמחקו ' + rows.length + ' לקוחות מהמאגר.', 'success');
+        });
+
+        // ---------- the address book through Excel: download, fix, upload ----------
+        // Only the columns of the customer window, plus the id that tells the upload which customer a row is.
+        const XLS_ID_HEADER = 'מזהה פנימי (אל תשנה)';
+        const XLS_SHOW_LIMIT = 200;
+        const manageXlsDown  = document.getElementById('abManageXlsDown');
+        const manageXlsUp    = document.getElementById('abManageXlsUp');
+        const manageXlsInput = document.getElementById('abManageXlsInput');
+        const xlsModal       = document.getElementById('abXlsModal');
+        const xlsSum         = document.getElementById('abXlsSum');
+        const xlsNote        = document.getElementById('abXlsNote');
+        const xlsList        = document.getElementById('abXlsList');
+        const xlsApply       = document.getElementById('abXlsApply');
+        const xlsApplyText   = document.getElementById('abXlsApplyText');
+        const xlsCancel      = document.getElementById('abXlsCancel');
+        let xlsPlan = null;
+
+        // The admin always may; another user only when the admin gave them the right (the server checks it again on upload).
+        function canExcel() {
+          return !!me && (me.role === 'admin' || !!me.excel);
+        }
+
+        function xlsClean(v) {
+          return String(v == null ? '' : v).replace(BIDI_CHARS, '').replace(/[   ]/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        manageXlsDown.addEventListener('click', function() {
+          if (!canExcel()) return;
+          try {
+            const aoa = [CUST_FIELDS.concat([XLS_ID_HEADER])];
+            abRows.forEach(function(r) {
+              aoa.push(CUST_FIELDS.map(function(c) { return r[c] || ''; }).concat([r._id]));
+            });
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{ wch: 18 }, { wch: 14 }, { wch: 16 }, { wch: 22 }, { wch: 10 }, { wch: 8 }, { wch: 8 }, { wch: 30 }, { wch: 14 }, { wch: 30 }, { wch: 14 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'מאגר כתובות');
+            wb.Workbook = { Views: [{ RTL: true }] };
+            const d = new Date();
+            const stamp = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+            const blob = new Blob([XLSX.write(wb, { bookType: 'xlsx', type: 'array' })], {
+              type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            triggerBlobDownload(blob, 'מאגר-כתובות-' + stamp + '.xlsx');
+          } catch (err) {
+            showAlert('שגיאה בהורדת המאגר: ' + (err.message || 'לא ידוע'), 'error');
+          }
+        });
+
+        // What the file would change. A blank cell never erases, a row the file leaves alone stays as it is,
+        // a row without an id is a new customer. Nothing is sent before the user approves the list.
+        function xlsBuildPlan(workbook) {
+          const parsed = sheetToRows(workbook);
+          const headers = parsed.headers.map(abNorm);
+          let idIdx = headers.indexOf(abNorm(XLS_ID_HEADER));
+          if (idIdx < 0) idIdx = headers.findIndex(function(h) { return h.indexOf('מזהה פנימי') === 0; });
+          if (idIdx < 0) throw new Error('בקובץ אין עמודת "' + XLS_ID_HEADER + '". יש לערוך קובץ שהורד מהכפתור "הורד לאקסל".');
+          const colIdx = {};
+          let found = 0;
+          CUST_FIELDS.forEach(function(col) {
+            let i = abFindColumnIndex(headers, col);
+            if (i === idIdx) i = -1;
+            colIdx[col] = i;
+            if (i >= 0) found++;
+          });
+          if (!found) throw new Error('לא נמצאו בקובץ עמודות של פרטי לקוח.');
+
+          const byId = new Map(abRows.map(function(r) { return [r._id, r]; }));
+          const seen = new Set();
+          const plan = { updates: [], adds: [], same: 0, unknown: 0, dupes: 0, filled: 0, fixed: 0 };
+          parsed.dataRows.forEach(function(raw) {
+            const vals = {};
+            CUST_FIELDS.forEach(function(col) {
+              let v = colIdx[col] >= 0 ? xlsClean(raw[colIdx[col]]) : '';
+              if (v && (col === 'טלפון' || col === 'טלפון יעד 2')) {
+                // Excel drops a leading zero and may add dashes: write the number the way the book keeps it
+                const p = normalizePhoneNumber(v);
+                if (p) v = p.value;
+              }
+              if (v) vals[col] = v;
+            });
+            const id = xlsClean(raw[idIdx]);
+            if (!id) {
+              if (Object.keys(vals).length) plan.adds.push({ d: vals });
+              return;
+            }
+            const row = byId.get(id);
+            if (!row) { plan.unknown++; return; }
+            if (seen.has(id)) { plan.dupes++; return; }
+            seen.add(id);
+            const patch = {};
+            const changes = [];
+            Object.keys(vals).forEach(function(col) {
+              const v = vals[col];
+              const cur = xlsClean(row[col]);
+              // the same digits are the same phone number, however it is written
+              if ((col === 'טלפון' || col === 'טלפון יעד 2') && v.replace(/\D/g, '') === cur.replace(/\D/g, '')) return;
+              if (v === cur) return;
+              patch[col] = v;
+              changes.push({ col: col, from: cur, to: v });
+              if (cur) plan.fixed++; else plan.filled++;
+            });
+            if (changes.length) plan.updates.push({ id: row._id, row: row, patch: patch, changes: changes });
+            else plan.same++;
+          });
+          return plan;
+        }
+
+        function xlsWho(row, d) {
+          return xlsClean((row && row['שם פרטי']) || (d && d['שם פרטי']) || (row && row['טלפון']) || (d && d['טלפון'])) || 'ללא שם';
+        }
+
+        function xlsRenderPlan(plan) {
+          const total = plan.updates.length + plan.adds.length;
+          xlsSum.innerHTML =
+            '<div class="xls-stat"><b>' + plan.updates.length + '</b>לקוחות יעודכנו</div>' +
+            '<div class="xls-stat"><b>' + plan.filled + '</b>שדות ריקים יושלמו</div>' +
+            '<div class="xls-stat"><b>' + plan.fixed + '</b>ערכים קיימים יתוקנו</div>' +
+            '<div class="xls-stat is-new"><b>' + plan.adds.length + '</b>לקוחות חדשים</div>' +
+            '<div class="xls-stat"><b>' + plan.same + '</b>נשארו בלי שינוי</div>';
+          const notes = ['תאים ריקים בקובץ לא מוחקים כלום, ושורות שלא נגעת בהן נשארות כמו שהן.'];
+          if (plan.unknown) notes.push('שורות עם מזהה שלא קיים במאגר (לקוח שנמחק או מזהה שהשתנה) לא ייגעו: ' + plan.unknown + '.');
+          if (plan.dupes) notes.push('שורות עם מזהה שחוזר פעמיים דולגו: ' + plan.dupes + '.');
+          xlsNote.textContent = notes.join(' ');
+          if (!total) {
+            xlsList.innerHTML = '<div class="xls-more">לא נמצאו שינויים בקובץ.</div>';
+          } else {
+            const items = [];
+            plan.updates.forEach(function(u) {
+              items.push('<div class="xls-item"><div class="xls-who">' + abEscapeHtml(xlsWho(u.row)) + '</div><div class="xls-chs">' +
+                u.changes.map(function(c) {
+                  return '<div class="xls-ch' + (c.from ? ' is-over' : '') + '"><span class="xls-f">' + abEscapeHtml(c.col) + ':</span>' +
+                    (c.from ? '<span class="xls-old">' + abEscapeHtml(c.from) + '</span><span>←</span>' : '<span class="xls-old is-empty">ריק</span><span>←</span>') +
+                    '<span class="xls-new">' + abEscapeHtml(c.to) + '</span></div>';
+                }).join('') + '</div></div>');
+            });
+            plan.adds.forEach(function(a) {
+              items.push('<div class="xls-item"><div class="xls-who">' + abEscapeHtml(xlsWho(null, a.d)) + '</div><div class="xls-chs">' +
+                '<div class="xls-ch"><span class="tag tag-ok">לקוח חדש</span><span class="xls-new">' +
+                abEscapeHtml(CUST_FIELDS.filter(function(c) { return a.d[c]; }).map(function(c) { return a.d[c]; }).join(' | ')) +
+                '</span></div></div></div>');
+            });
+            xlsList.innerHTML = items.slice(0, XLS_SHOW_LIMIT).join('') +
+              (items.length > XLS_SHOW_LIMIT ? '<div class="xls-more">ועוד ' + (items.length - XLS_SHOW_LIMIT) + ' לקוחות שלא מוצגים כאן. כולם יתעדכנו.</div>' : '');
+          }
+          xlsApply.disabled = !total;
+          xlsApplyText.textContent = total ? 'החל על ' + total + ' לקוחות' : 'אין מה להחיל';
+        }
+
+        function closeXls() { xlsModal.classList.add('hidden'); xlsPlan = null; }
+
+        manageXlsUp.addEventListener('click', function() { if (canExcel()) manageXlsInput.click(); });
+        manageXlsInput.addEventListener('change', async function() {
+          const file = manageXlsInput.files && manageXlsInput.files[0];
+          manageXlsInput.value = '';
+          if (!file || !canExcel()) return;
+          try {
+            const buffer = await readFileAsArrayBuffer(file);
+            xlsPlan = xlsBuildPlan(XLSX.read(buffer, { type: 'array' }));
+          } catch (err) {
+            showAlert('שגיאה בקריאת הקובץ: ' + (err.message || 'לא ידוע'), 'error');
+            return;
+          }
+          xlsRenderPlan(xlsPlan);
+          xlsModal.classList.remove('hidden');
+        });
+        xlsCancel.addEventListener('click', closeXls);
+        xlsModal.addEventListener('click', function(e) { if (e.target === xlsModal) closeXls(); });
+        xlsApply.addEventListener('click', async function() {
+          if (!xlsPlan) return;
+          const plan = xlsPlan;
+          const changes = plan.updates.map(function(u) { return { id: u.id, d: u.patch }; })
+            .concat(plan.adds.map(function(a) { return { id: null, d: a.d }; }));
+          if (!changes.length) return;
+          xlsApply.disabled = true;
+          let result;
+          try {
+            result = await rpc('dlv_ab_apply', { p_token: authToken, p_changes: changes });
+          } catch (err) {
+            xlsApply.disabled = false;
+            showAlert('המאגר לא עודכן: ' + serverErrorText(err), 'error');
+            return;
+          }
+          closeXls();
+          await addressBook.load();
+          renderManage();
+          showAlert('המאגר עודכן מהקובץ: ' + result.updated + ' לקוחות עודכנו, ' + result.added + ' נוספו' +
+            (result.skipped ? ', ' + result.skipped + ' דולגו (נמחקו בינתיים)' : '') + '.', 'success');
+        });
 
         // ---------- uploading a file (admin) ----------
         const AB_ALIASES = {
@@ -3540,7 +3882,10 @@
                 return acc;
               }, {})
             );
-            convertResult.rowMeta.push({ custId: row._cust, ship: false, fromBook: [] });
+            // bookBase: what the row held when it came from the book, to tell later whether something was fixed
+            const bookBase = {};
+            BOOK_FIELDS.forEach(function(col) { bookBase[col] = String(copy[col] || '').trim(); });
+            convertResult.rowMeta.push({ custId: row._cust, ship: false, fromBook: [], bookRowId: row._id, bookBase: bookBase });
           });
 
           document.getElementById('statInput').textContent   = convertResult.totalInputRows;
@@ -3691,6 +4036,8 @@
         USERNAME_TAKEN: 'שם המשתמש הזה כבר קיים.',
         NOT_SELF: 'אי אפשר לחסום, למחוק או להוריד הרשאת מנהל לעצמך, ולא להסיר את המכשיר שאתה מחובר ממנו.',
         ADMIN_ONLY: 'רק מנהל יכול לעשות את זה.',
+        NOT_FOUND: 'הלקוח כבר לא קיים במאגר (אולי נמחק).',
+        NO_PERMISSION:'אין לך הרשאה להוריד ולהעלות את המאגר באקסל. פנה למנהל.',
         AUTH: 'החיבור הסתיים. צריך להיכנס שוב.',
         SETUP_DONE: 'כבר קיים מנהל במערכת.',
         BAD_DATA: 'הנתונים שנשלחו לא תקינים.'
@@ -3991,6 +4338,7 @@
               '<span class="user-card-name">' + escapeHtml(u.name || u.username) + '</span>' +
               '<span class="user-card-meta">' + escapeHtml(u.username) + '</span>' +
               (u.role === 'admin' ? '<span class="tag tag-admin">מנהל</span>' : '') +
+              (u.role !== 'admin' && u.ab_excel ? '<span class="tag tag-ok">מאגר באקסל</span>' : '') +
               (u.active ? '' : '<span class="tag tag-off">חסום</span>') +
               (isSelf ? '<span class="user-card-meta">(אתה)</span>' : '') +
               '<span class="spacer"></span>' +
@@ -4023,6 +4371,8 @@
               '<option value="user">משתמש: המרת קבצים וחיפוש במאגר</option>' +
               '<option value="admin">מנהל: גם העלאת מאגר ואישור מכשירים</option>' +
             '</select></label>' +
+            '<label class="field-check"><input type="checkbox" id="ufExcel">' +
+              ' מאפשר הורדה והעלאה של המאגר באקסל <span class="user-card-meta" id="ufExcelHint"></span></label>' +
             '<label class="field-check"><input type="checkbox" id="ufActive"' + (u.active === false ? '' : ' checked') + (isSelf ? ' disabled' : '') + '>' +
               ' פעיל (בלי סימון המשתמש חסום)</label>' +
             '<div class="user-form-actions">' +
@@ -4031,6 +4381,16 @@
             '</div>' +
           '</form>';
         document.getElementById('ufRole').value = u.role || 'user';
+        // An admin may always use the Excel buttons, so the box is only a choice for a regular user.
+        const ufExcel = document.getElementById('ufExcel');
+        function syncExcelBox() {
+          const admin = document.getElementById('ufRole').value === 'admin';
+          ufExcel.checked = admin || !!u.ab_excel;
+          ufExcel.disabled = admin;
+          document.getElementById('ufExcelHint').textContent = admin ? '(מנהל תמיד מורשה)' : '';
+        }
+        syncExcelBox();
+        document.getElementById('ufRole').addEventListener('change', syncExcelBox);
         document.getElementById('userForm').addEventListener('submit', saveUserForm);
         document.getElementById('ufCancel').addEventListener('click', function() {
           editingUser = null;
@@ -4050,7 +4410,8 @@
             p_name: document.getElementById('ufName').value.trim(),
             p_role: document.getElementById('ufRole').value,
             p_active: document.getElementById('ufActive').checked,
-            p_password: document.getElementById('ufPass').value || null
+            p_password: document.getElementById('ufPass').value || null,
+            p_ab_excel: document.getElementById('ufRole').value === 'admin' ? !!u.ab_excel : document.getElementById('ufExcel').checked
           });
         } catch (err) {
           setUsersError(serverErrorText(err));
