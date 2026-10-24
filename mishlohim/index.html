@@ -303,18 +303,6 @@
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     }
     
-    .preview-measure {
-      position: fixed;
-      top: -9999px;
-      left: -9999px;
-      visibility: hidden;
-      white-space: pre;
-      font-family: 'Heebo', Arial, sans-serif;
-      font-size: 0.85rem;
-      font-weight: 400;
-      padding: 0 8px;
-      pointer-events: none;
-    }
     .preview-editable {
       background: #fff;
     }
@@ -582,6 +570,28 @@
     .user-form-actions { display: flex; gap: 8px; justify-content: flex-start; }
     .modal-error { margin-bottom: 12px; }
 
+    /* Preview: what still needs a look in each row */
+    .preview-flags { white-space: nowrap; vertical-align: middle; min-width: 90px; }
+    .preview-table tr.row-red td { background: #fef2f2; }
+    .preview-table tr.row-yellow td { background: #fffbeb; }
+    .preview-table tr.row-red .preview-input, .preview-table tr.row-yellow .preview-input { background: transparent; }
+    .preview-table tr.preview-row-hidden { display: none; }
+    .flag {
+      display: inline-block;
+      padding: 2px 8px;
+      margin: 1px 0 1px 4px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.3;
+    }
+    .flag-red { background: #fee2e2; color: var(--danger); }
+    .flag-yellow { background: #fef3c7; color: #b45309; }
+    .flag-ok { background: #dcfce7; color: #047857; }
+    .flag-book { background: #e0f2fe; color: #0369a1; }
+    .save-book-btn { padding: 2px 10px !important; font-size: 0.75rem !important; height: auto !important; }
+    #problemsBtn.active { background: #fef3c7; border-color: #f59e0b; color: #92400e; }
+
     /* Address book: customer window and the manage list */
     .cust-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
     .cust-fields .field-wide { grid-column: 1 / -1; }
@@ -741,6 +751,7 @@
         <div class="preview-header">
           <h3 id="previewTitle">תצוגה מקדימה</h3>
           <div class="preview-toolbar">
+            <button class="btn btn-secondary hidden" id="problemsBtn" type="button">⚠️ הצג רק בעייתיות</button>
             <button class="btn btn-secondary btn-source-check" id="sourceCheckBtn" type="button">🔍 בדיקת מקור שדה</button>
             <button class="btn btn-secondary" id="deleteRowsBtn" type="button">🗑️ מחיקת שורות</button>
             <button class="btn btn-secondary" id="tagRowsBtn" type="button">☑️ בחר</button>
@@ -964,9 +975,48 @@
       return result;
     }
 
+    function simplifyCityName(s) {
+      return String(s || '').replace(/[ \-וי'"׳״.]/g, '')
+        .replace(/ט/g, 'ת')
+        .replace(/ק/g, 'כ')
+        .replace(/ע/g, 'א')
+        .replace(/ס/g, 'ש')
+        .replace(/ם/g, 'מ')
+        .replace(/ן/g, 'נ')
+        .replace(/ץ/g, 'צ')
+        .replace(/ף/g, 'פ')
+        .replace(/ך/g, 'כ');
+    }
+
     function addCityVariant(variants, name) {
       const value = normalizeCityName(name);
       if (value && variants.indexOf(value) < 0) variants.push(value);
+    }
+
+    // קיצורים ושמות שכותבים בפריוריטי, והשם הרשמי שלהם ברשימת ימי ההספקה.
+    // ק"ס הוא קריית ספר (מודיעין עילית), לא כפר סבא (כ"ס).
+    const CITY_ABBREVIATIONS = {
+      'ת"א': 'תל אביב', 'תא': 'תל אביב', 'תל אביב יפו': 'תל אביב', 'Tel Aviv': 'תל אביב',
+      'י-ם': 'ירושלים', 'ים': 'ירושלים', 'Jerusalem': 'ירושלים',
+      'פ"ת': 'פתח תקווה', 'פת': 'פתח תקווה',
+      'ראשל"צ': 'ראשון לציון', 'ראשלצ': 'ראשון לציון',
+      'ב"ש': 'באר שבע', 'בש': 'באר שבע',
+      'כ"ס': 'כפר סבא', 'כס': 'כפר סבא',
+      'ר"ג': 'רמת גן', 'רג': 'רמת גן',
+      'ב"ב': 'בני ברק', 'בב': 'בני ברק',
+      'ק"ס': 'מודיעין עילית', 'קס': 'מודיעין עילית', 'קרית ספר': 'מודיעין עילית', 'קריית ספר': 'מודיעין עילית',
+      'ביתר': 'ביתר עילית',
+      'מודיעין': 'מודיעין מכבים רעות',
+      'נתב"ג': 'נמל תעופה בן גוריון', 'נתבג': 'נמל תעופה בן גוריון'
+    };
+
+    function cityAbbreviation(name) {
+      const key = normalizeCityName(name).replace(/[״”“]/g, '"').replace(/[׳’']/g, "'");
+      for (const abbr in CITY_ABBREVIATIONS) {
+        const k = normalizeCityName(abbr);
+        if (k === key || k.replace(/"/g, '') === key.replace(/"/g, '')) return CITY_ABBREVIATIONS[abbr];
+      }
+      return null;
     }
 
     // basicOnly: skip the spelling variants (used for API queries to keep requests few)
@@ -974,31 +1024,10 @@
       const normalized = normalizeCityName(city);
       const stripped = stripCityPrefixes(normalized);
       const variants = [];
-      
-      // קיצורים נפוצים
-      const abbreviations = {
-        'ת"א': 'תל אביב',
-        'תא': 'תל אביב',
-        'י-ם': 'ירושלים',
-        'ים': 'ירושלים',
-        'פ"ת': 'פתח תקווה',
-        'פת': 'פתח תקווה',
-        'ראשל"צ': 'ראשון לציון',
-        'ראשלצ': 'ראשון לציון',
-        'ב"ש': 'באר שבע',
-        'בש': 'באר שבע',
-        'כ"ס': 'כפר סבא',
-        'כס': 'כפר סבא',
-        'ר"ג': 'רמת גן',
-        'רג': 'רמת גן',
-        'נתב"ג': 'נמל תעופה בן גוריון',
-        'נתבג': 'נמל תעופה בן גוריון'
-      };
-      
-      if (abbreviations[normalized]) {
-        addCityVariant(variants, abbreviations[normalized]);
-      }
-      
+
+      const expanded = cityAbbreviation(normalized);
+      if (expanded) addCityVariant(variants, expanded);
+
       addCityVariant(variants, normalized);
       if (stripped && stripped !== normalized) addCityVariant(variants, stripped);
 
@@ -1040,12 +1069,17 @@
       return variants;
     }
 
+    // Names the list had no match for: the fuzzy search below goes over the whole list, so it runs once per name.
+    // Emptied when the list changes (loadCitiesFromServer, or a name the site found).
+    const deliveryDaysCacheMisses = {};
+
     function lookupDeliveryDaysFromCache(city) {
       const normalized = normalizeCityName(city);
       if (!normalized) return null;
       if (deliveryDaysMemoryCache[normalized] !== undefined) {
         return deliveryDaysMemoryCache[normalized];
       }
+      if (deliveryDaysCacheMisses[normalized]) return null;
 
       const cache = window.DELIVERY_CITIES_CACHE || {};
       const variants = getCityLookupVariants(normalized);
@@ -1089,18 +1123,7 @@
       }
 
       // חיפוש חכם שמתעלם מרווחים, מקפים, ואותיות אהוי (ו, י) כדי להתגבר על שגיאות כתיב
-      function simplify(s) { 
-        return s.replace(/[ \-וי]/g, '')
-                .replace(/ט/g, 'ת')
-                .replace(/ק/g, 'כ')
-                .replace(/ע/g, 'א')
-                .replace(/ס/g, 'ש')
-                .replace(/ם/g, 'מ')
-                .replace(/ן/g, 'נ')
-                .replace(/ץ/g, 'צ')
-                .replace(/ף/g, 'פ')
-                .replace(/ך/g, 'כ'); 
-      }
+      const simplify = simplifyCityName;
       for (let v = 0; v < variants.length; v++) {
         const candidateSimple = simplify(variants[v]);
         if (candidateSimple.length < 3) continue;
@@ -1120,6 +1143,7 @@
         }
       }
 
+      deliveryDaysCacheMisses[normalized] = true;
       return null;
     }
 
@@ -1214,6 +1238,8 @@
         );
         if (cityInput && normalizeCityName(cityInput.value) !== normalized) return;
         setDeliveryDaysCellContent(cell, days, false);
+        // the row's flags depend on whether the city was found
+        document.dispatchEvent(new CustomEvent('dlv-city-resolved', { detail: rowIndex }));
       });
     }
 
@@ -1227,6 +1253,7 @@
       { key: 'orderId', label: 'מזהה הזמנה', deliveryTargets: ['מזהה הזמנה'], sourceNames: ['הזמנה'] },
       { key: 'customerName', label: 'שם פרטי', deliveryTargets: ['שם פרטי'], sourceNames: ['שם לקוח'] },
       { key: 'phone', label: 'טלפון', deliveryTargets: ['טלפון'], sourceNames: ['טלפון', 'מספר טלפון'] },
+      { key: 'custId', label: 'מס. לקוח', deliveryTargets: [], sourceNames: ['מס. לקוח', 'מס לקוח', 'מספר לקוח'] },
       { key: 'cityAlt', label: 'עיר - כתובת', deliveryTargets: ['עיר'], sourceNames: ['עיר - כתובת'] },
       { key: 'city', label: 'עיר (גיבוי)', deliveryTargets: ['עיר'], sourceNames: ['עיר'], excludePatterns: ['כתובת'], hidden: true },
       { key: 'streetAlt', label: 'רחוב - כתובת', deliveryTargets: ['רחוב'], sourceNames: ['רחוב - כתובת'] },
@@ -1334,130 +1361,390 @@
       };
     }
 
-    function isNumericHouseValue(text) {
-      return /^[\d\s\/\\.,\-]+$/.test(text) && /\d/.test(text);
+    // ---------- address cleanup ----------
+    // Priority keeps free text in its address fields ("גרוסמן 7 קומה 2 משפחת חשין"). These turn it into the
+    // courier file's columns. The same cleanup runs on customers added from the address book.
+    const BIDI_CHARS = /[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g;
+    const PHONE_IN_TEXT = /(^|[^\d+])((?:\+|00)?\d(?:[\s\-.]?\d){6,14})(?!\d)/g;
+    const FLOOR_WORDS = { 'קרקע': 'קרקע', 'ראשונה': '1', 'שניה': '2', 'שנייה': '2', 'שלישית': '3', 'רביעית': '4', 'חמישית': '5', 'שישית': '6' };
+    const SETTLEMENT_PREFIX = /^(?:מושב|קיבוץ|ישוב|יישוב|הישוב|היישוב)\s+/;
+    const FOREIGN_CITY = /[A-Za-z]|לונדון|אנטוורפן|פריז|מנצ'סטר|ברוקלין|ניו יורק|גייטסהד|ציריך/;
+    const PHONE_WORDS = /וואטסאפ|ווטסאפ|וואצאפ|וואצפ|ווצאפ|whats ?app|ליצירת קשר|טלפון|נייד|פלאפון|(?:^|\s)טל(?=[\s:.]|$)|(?:^|\s)מס(?:פר)?['׳.]?(?=\s|$)|[:;,()]/gi;
+
+    function escapeRegExp(s) {
+      return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
-    function splitHouseNumber(value) {
-      const text = String(value || '').trim();
-      if (!text) return { houseNum: '', deliveryNotes: '' };
-      if (isNumericHouseValue(text)) {
-        return { houseNum: text, deliveryNotes: '' };
+    function cleanText(s) {
+      let t = String(s == null ? '' : s).replace(BIDI_CHARS, '').replace(/[\u00a0\u2007\u202f]/g, ' ')
+        .replace(/\s+/g, ' ').replace(/^[\s,.\-–;:]+|[\s,.\-–;:]+$/g, '').trim();
+      if (/^\(.*\)$/.test(t)) t = t.slice(1, -1).trim();
+      return t;
+    }
+
+    // A phone number as the courier file wants it, and what kind it is: 'il' (Israeli, right length),
+    // 'il-bad' (Israeli but a digit short or long), 'intl' (abroad) or 'unknown'.
+    function normalizePhoneNumber(raw) {
+      const s = String(raw || '').replace(BIDI_CHARS, '').trim();
+      let d = s.replace(/\D/g, '');
+      if (!d) return null;
+      const plus = /^\+/.test(s);
+      if (plus || d.indexOf('00') === 0) {
+        if (!plus) d = d.slice(2);
+        if (d.indexOf('972') !== 0) return { value: '+' + d, kind: 'intl' };
+        d = '0' + d.slice(3);
+      } else if (d.indexOf('972') === 0 && d.length >= 11) {
+        d = '0' + d.slice(3);
       }
-      return { houseNum: '', deliveryNotes: text };
+      if (/^1[5789]00\d{6}$/.test(d)) return { value: d, kind: 'il' };
+      if (/^5\d{8}$/.test(d)) d = '0' + d;   // "54-916-4477": the leading 0 was lost
+      if (d.charAt(0) === '0') {
+        const ok = /^0[57]\d{8}$/.test(d) || /^0[23489]\d{7}$/.test(d);
+        return { value: d, kind: ok ? 'il' : 'il-bad' };
+      }
+      return { value: d, kind: 'unknown' };
     }
 
-    function convert(parsedData, manualMap, settings) {
+    // Every phone number in a piece of text, and the text without them. minDigits: inside an address only
+    // long numbers count, so a house or apartment number is never taken for a phone.
+    function takePhones(text, minDigits) {
+      const phones = [];
+      let rest = String(text || '').replace(BIDI_CHARS, '').replace(PHONE_IN_TEXT, function(m, pre, num) {
+        if (num.replace(/\D/g, '').length < minDigits) return m;
+        const p = normalizePhoneNumber(num);
+        if (!p) return m;
+        phones.push(p);
+        return pre + ' ';
+      });
+      if (phones.length) {
+        rest = rest.replace(/(?:טלפון|טל|נייד|פלאפון)\s*(?:למשלוח|ליצירת קשר|לתיאום)?\s*:?/g, ' ').replace(/\s+ל-?\s*$/, ' ');
+      }
+      return { phones: phones, rest: rest };
+    }
+
+    // The phone column: its numbers, and the name of a person written next to them ("0504184042 שמוליק").
+    function parsePhoneField(raw) {
+      const t = takePhones(raw, 7);
+      const contact = cleanText(t.rest.replace(PHONE_WORDS, ' '));
+      return { phones: t.phones, contact: /[א-תA-Za-z]{2,}/.test(contact) ? contact : '' };
+    }
+
+    // The customer's name without an ID number, phone numbers, hidden characters or a trailing dot.
+    function cleanName(raw) {
+      const s = String(raw || '').replace(BIDI_CHARS, '')
+        .replace(/ת\s?\.?\s?ז\s?\.?\s*:?\s*\d{5,9}/g, ' ')
+        .replace(/ת["״]ז\s*:?\s*\d{5,9}/g, ' ');
+      const t = takePhones(s, 9);
+      return { name: cleanText(t.rest), phones: t.phones };
+    }
+
+    const simplifiedNames = {};
+    function simplifiedName(n) {
+      if (simplifiedNames[n] === undefined) simplifiedNames[n] = simplifyCityName(n);
+      return simplifiedNames[n];
+    }
+
+    function knownCityNames() {
+      return Object.keys(window.DELIVERY_CITIES_CACHE || {}).sort(function(a, b) { return b.length - a.length; });
+    }
+
+    // The settlement name as the delivery-days list has it, plus a neighbourhood that was written with it.
+    // known is false when no list name fits; the name is then kept as written.
+    function officialCity(raw, names) {
+      const list = window.DELIVERY_CITIES_CACHE || {};
+      const spaced = function(n) { const s = n.replace(/-/g, ' '); return list[s] !== undefined ? s : n; };
+      let c = cleanText(raw).replace(/[״”“]/g, '"').replace(/’/g, "'");
+      if (!c) return { city: '', note: '', known: false };
+      const abbr = cityAbbreviation(c);
+      if (abbr) c = abbr;
+      const tries = [c, c.replace(SETTLEMENT_PREFIX, ''), c.replace(/^קרית /, 'קריית '), c.replace(/^קריית /, 'קרית '),
+        c.replace(/-/g, ' '), c.replace(/ /g, '-')];
+      for (let i = 0; i < tries.length; i++) {
+        if (list[tries[i]] !== undefined) return { city: spaced(tries[i]), note: '', known: true };
+      }
+      const simple = simplifyCityName(c);
+      if (simple.length >= 3) {
+        const hit = names.find(function(n) { return simplifiedName(n) === simple; });
+        if (hit) return { city: spaced(hit), note: '', known: true };
+      }
+      // "בית שמש רמה א'", "ירושלים - הר חומה": a known name first, a neighbourhood after it
+      for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        if (n.length >= 3 && c.indexOf(n + ' ') === 0) return { city: spaced(n), note: cleanText(c.slice(n.length)), known: true };
+      }
+      // "רמת בית שמש": a neighbourhood whose name ends with the city
+      for (let i = 0; i < names.length; i++) {
+        const n = names[i];
+        if (n.length >= 4 && c.length > n.length && c.slice(-(n.length + 1)) === ' ' + n) return { city: spaced(n), note: c, known: true };
+      }
+      // "פרדס חנה" -> "פרדס חנה כרכור": the only list name that starts with what was written
+      if (c.length >= 4) {
+        const longer = names.filter(function(n) { return n.indexOf(c + ' ') === 0 || n.indexOf(c + '-') === 0; })
+          .map(spaced).filter(function(n, i, a) { return a.indexOf(n) === i; });
+        if (longer.length === 1) return { city: longer[0], note: '', known: true };
+      }
+      return { city: c, note: '', known: false };
+    }
+
+    // Pulls a floor ("קומה 2", "קומה שניה") and an apartment ("דירה 5", "Apt. 2") out of address text.
+    function takeFloorAndApt(text, out) {
+      let s = String(text || '');
+      let m = s.match(/(?:קומה|ק['׳])\s*(-?\d+(?:\.\d)?|קרקע|ראשונה|שנייה|שניה|שלישית|רביעית|חמישית|שישית)/);
+      if (m) { if (!out.floor) out.floor = FLOOR_WORDS[m[1]] || m[1]; s = s.replace(m[0], ' '); }
+      m = s.match(/(?:דירה|דיר['׳]|Apt\.?)\s*(?:מס(?:פר)?['׳.]?\s*)?(\d+)/i);
+      if (m) { if (!out.apt) out.apt = m[1]; s = s.replace(m[0], ' '); }
+      return s.replace(/(^|\s)(?:דירה|קומה)(?=\s|$)/g, ' ');
+    }
+
+    // Splits a street field and the house-number field of the same address into street, house, floor,
+    // apartment and notes ("10/14" is house 10, apartment 14). Phone numbers found on the way are returned.
+    function parseAddress(streetRaw, houseRaw, city) {
+      const out = { street: '', house: '', floor: '', apt: '', notes: [], phones: [] };
+
+      let t = takePhones(streetRaw, 9);
+      out.phones = out.phones.concat(t.phones);
+      let s = cleanText(takeFloorAndApt(t.rest, out));
+      s = cleanText(s.replace(/^כתובת\s*:?\s*/, ''));
+      // "בית וגן רח' יוסף חכמי 44": what comes before the street marker is a neighbourhood
+      const marker = s.match(/^(.+?)\s+(?:ברחוב|רחוב|רח['׳]?)\s+(.+)$/);
+      if (marker && /[א-ת]{2,}/.test(marker[1]) && /\d/.test(marker[2])) { out.notes.push(cleanText(marker[1])); s = marker[2]; }
+      s = cleanText(s.replace(/^(?:ברחוב|רחוב|רח['׳]?)\s+/, ''));
+      if (city) s = cleanText(s.replace(new RegExp('[,\\s]+' + escapeRegExp(city) + '$'), ''));
+      // "ישוב אש קודש" with the city אש קודש: a small place without streets goes by its own name
+      if (city && /^(?:ישוב|יישוב|מושב|קיבוץ)$/.test(s)) s = city;
+
+      let m = s.match(/^(\D*?)\s*(\d+)\s*([א-ת]['׳]?(?=[\s,\/.\-]|$))?\s*(?:\/\s*(\d+))?(.*)$/);
+      if (m && cleanText(m[1])) {
+        out.street = cleanText(m[1]);
+        out.house = m[2] + (m[3] || '').replace(/['׳]/g, '');
+        if (m[4] && !out.apt) out.apt = m[4];
+        if (cleanText(m[5])) out.notes.push(cleanText(m[5]));
+      } else {
+        // "125/7 מעגלי הרים לוין": the number first, and no other digits after it
+        m = s.match(/^(\d+)\s*([א-ת](?=\s))?\s*(?:\/\s*(\d+))?\s+(\D+)$/);
+        if (m) {
+          out.house = m[1] + (m[2] || '');
+          if (m[3] && !out.apt) out.apt = m[3];
+          out.street = cleanText(m[4]);
+        } else {
+          out.street = s;
+        }
+      }
+
+      t = takePhones(houseRaw, 9);
+      out.phones = out.phones.concat(t.phones);
+      let h = cleanText(takeFloorAndApt(t.rest, out));
+      m = h.match(/^(\d+)\s*([א-ת](?=\s|$))?\s*(?:\/\s*(\d+))?(.*)$/);
+      if (m) {
+        if (!out.house) out.house = m[1] + (m[2] || '');
+        if (m[3] && !out.apt) out.apt = m[3];
+        h = cleanText(m[4]);
+      }
+      if (h) out.notes.unshift(h);
+      out.notes = uniqueNotes(out.notes, city);
+      return out;
+    }
+
+    // Notes without empty ones, repeats, or a repeat of the city.
+    function uniqueNotes(notes, city) {
+      const seen = {};
+      const citySimple = city ? simplifyCityName(city) : null;
+      return notes.map(cleanText).filter(function(n) {
+        const k = simplifyCityName(n);
+        if (!n || k === citySimple || seen[k]) return false;
+        seen[k] = true;
+        return true;
+      });
+    }
+
+    function addPhones(list, more) {
+      more.forEach(function(p) {
+        if (p && !list.some(function(q) { return q.value === p.value; })) list.push(p);
+      });
+      return list;
+    }
+
+    // A customer taken from the address book goes through the same cleanup as a Priority order.
+    function cleanDeliveryRow(row) {
+      const names = knownCityNames();
+      const out = Object.assign({}, row);
+      const nameInfo = cleanName(row['שם פרטי']);
+      const phoneInfo = parsePhoneField(row['טלפון']);
+      const cityInfo = officialCity(row['עיר'], names);
+      const houseText = cleanText(row['מספר בית']);
+      const plainHouse = /^\d+[א-ת]?$/.test(houseText);
+      const needsSplit = !plainHouse && (/\d/.test(row['רחוב'] || '') || !!houseText);
+      const addr = needsSplit ? parseAddress(row['רחוב'], row['מספר בית'], cityInfo.city) : null;
+      const phones = addPhones(addPhones(addPhones([], phoneInfo.phones), nameInfo.phones), addr ? addr.phones : []);
+
+      out['שם פרטי'] = nameInfo.name;
+      out['טלפון'] = phones[0] ? phones[0].value : cleanText(row['טלפון']);
+      if (!cleanText(row['טלפון יעד 2']) && phones[1]) out['טלפון יעד 2'] = phones[1].value;
+      out['עיר'] = cityInfo.city;
+      let notes = [cleanText(row['הערות משלוח'])];
+      if (addr) {
+        out['רחוב'] = addr.street;
+        out['מספר בית'] = addr.house;
+        if (!cleanText(row['קומה'])) out['קומה'] = addr.floor;
+        if (!cleanText(row['דירה'])) out['דירה'] = addr.apt;
+        notes = notes.concat(addr.notes);
+      }
+      if (cityInfo.note) notes.push(cityInfo.note);
+      if (phoneInfo.contact) notes.push('איש קשר: ' + phoneInfo.contact);
+      out['הערות משלוח'] = uniqueNotes(notes, out['עיר']).join(', ');
+      return out;
+    }
+
+    // What still needs a look in a delivery row. red: the courier cannot deliver without it
+    // (a warning comes before the download); yellow: worth checking.
+    function rowProblems(row) {
+      const red = [];
+      const yellow = [];
+      const v = function(col) { return String(row[col] || '').trim(); };
+      if (!v('עיר')) red.push('חסרה עיר');
+      if (!v('רחוב')) red.push('חסר רחוב');
+      if (!v('טלפון')) {
+        red.push('חסר טלפון');
+      } else {
+        const p = normalizePhoneNumber(v('טלפון'));
+        if (p && p.kind === 'intl') yellow.push('טלפון מחו"ל');
+        else if (!p || p.kind !== 'il') yellow.push('טלפון לא תקין');
+      }
+      if (v('רחוב') && !v('מספר בית')) yellow.push('חסר מספר בית');
+      // asked only after the list had no match, so a miss here means neither the list nor the site knows it
+      const city = normalizeCityName(v('עיר'));
+      if (city && deliveryDaysApiMisses[city]) yellow.push('עיר לא מזוהה');
+      return { red: red, yellow: yellow };
+    }
+
+    // abLookup(customer number) gives the address-book customer, or null.
+    function convert(parsedData, manualMap, settings, abLookup) {
       const rows = [];
       const rowSources = [];
+      const rowMeta = [];
       const skipped = [];
       const headers = parsedData.headers;
+      const names = knownCityNames();
+      const src = function(key) { return getSourceHeader(headers, manualMap[key]); };
 
       parsedData.dataRows.forEach(function(rawRow, index) {
-        const orderId = cellValue(rawRow, manualMap.orderId);
-        const customerName = cellValue(rawRow, manualMap.customerName);
+        const get = function(key) { return cellValue(rawRow, manualMap[key]); };
+        const orderId = get('orderId');
+        const nameRaw = get('customerName');
 
-        if (rawRow.length === 0 || (!orderId && !customerName)) {
+        if (rawRow.length === 0 || (!orderId && !nameRaw)) {
           skipped.push({ rowNum: index + 2, reason: 'שורה ריקה' });
           return;
         }
 
+        // A delivery address on the order wins as a whole: nothing is mixed in from the customer's own address.
+        const ship = !!(get('cityAlt') || get('streetAlt') || get('houseArea'));
+        const keys = ship ? ['cityAlt', 'streetAlt', 'houseArea'] : ['city', 'street', 'houseNum'];
+        const cityRaw = get(keys[0]);
+        const streetRaw = get(keys[1]);
+        const houseRaw = get(keys[2]);
+        const where = ship ? ' (כתובת המשלוח בהזמנה)' : ' (כתובת הלקוח)';
+
+        let cityInfo = officialCity(cityRaw, names);
+        let cityNote = cityRaw && cityInfo.city !== cleanText(cityRaw) ? 'במקור: ' + cityRaw : '';
+        if (!cityInfo.known) {
+          // no city: one written at the end of the street ("רב חנינא 10 בית שמש");
+          // a regional council ("בנימין") with the settlement written in the street ("ישוב אש קודש")
+          const street0 = cleanText(streetRaw.replace(/^כתובת\s*:?\s*/, ''));
+          const atEnd = !cityRaw && names.find(function(n) {
+            return n.length >= 3 && street0.length > n.length && street0.slice(-(n.length + 1)) === ' ' + n;
+          });
+          const settlement = street0.match(/(?:^|\s)(?:ישוב|יישוב|מושב|קיבוץ)\s+(.+)$/);
+          const settled = settlement ? officialCity(settlement[1], names) : null;
+          if (atEnd) {
+            cityInfo = officialCity(atEnd, names);
+            cityNote = 'נלקחה מסוף שדה הרחוב';
+          } else if (settled && settled.known) {
+            cityInfo = settled;
+            cityNote = 'היישוב נלקח משדה הרחוב' + (cityRaw ? ' (במקור: ' + cityRaw + ')' : '');
+          }
+        }
+
+        if (!cityInfo.known && FOREIGN_CITY.test(cityInfo.city) && !/[א-ת]/.test(streetRaw)) {
+          skipped.push({ rowNum: index + 2, reason: 'כתובת בחו"ל', order: orderId, name: nameRaw });
+          return;
+        }
+
+        const addr = parseAddress(streetRaw, houseRaw, cityInfo.city);
+        const nameInfo = cleanName(nameRaw);
+        const phoneRaw = get('phone');
+        const phoneInfo = parsePhoneField(phoneRaw);
+        const phones = addPhones(addPhones(addPhones([], phoneInfo.phones), nameInfo.phones), addr.phones);
+        const notes = addr.notes.slice();
+        if (cityInfo.note) notes.push(cityInfo.note);
+        if (phoneInfo.contact) notes.push('איש קשר: ' + phoneInfo.contact);
+
         const deliveryRow = {};
         const sources = {};
+        DELIVERY_COLUMNS.forEach(function(col) {
+          deliveryRow[col] = '';
+          sources[col] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
+        });
+        const addrHeader = [src(keys[1]), src(keys[2])].filter(Boolean).join(' / ');
+        const splitNote = 'פוצל מתוך: ' + [streetRaw, houseRaw].filter(Boolean).join(' | ') + where;
 
         deliveryRow['מזהה הזמנה'] = orderId;
-        sources['מזהה הזמנה'] = makeSourceInfo(
-          getSourceHeader(headers, manualMap.orderId),
-          orderId
-        );
+        sources['מזהה הזמנה'] = makeSourceInfo(src('orderId'), orderId);
+        deliveryRow['שם פרטי'] = nameInfo.name;
+        sources['שם פרטי'] = makeSourceInfo(src('customerName'), nameRaw, nameInfo.name !== cleanText(nameRaw) ? 'נוקה (ת.ז., טלפון או תווים מיותרים)' : '');
+        deliveryRow['טלפון'] = phones[0] ? phones[0].value : '';
+        sources['טלפון'] = makeSourceInfo(src('phone'), phoneRaw,
+          !phones[0] ? 'לא נמצא טלפון' : phoneInfo.phones[0] && phoneInfo.phones[0].value === phones[0].value
+            ? (phoneRaw !== phones[0].value ? 'נוקה לפורמט אחיד' : '') : 'נלקח מהשם או מהכתובת');
+        deliveryRow['טלפון יעד 2'] = phones[1] ? phones[1].value : '';
+        if (phones[1]) sources['טלפון יעד 2'] = makeSourceInfo('נמצא בטלפון, בשם או בכתובת', phones[1].value);
+        deliveryRow['עיר'] = cityInfo.city;
+        sources['עיר'] = makeSourceInfo(src(keys[0]) || 'לא נמצא בפריוריטי', cityRaw, (cityNote ? cityNote + ' ' : '') + where.trim());
+        deliveryRow['רחוב'] = addr.street;
+        deliveryRow['מספר בית'] = addr.house;
+        deliveryRow['קומה'] = addr.floor;
+        deliveryRow['דירה'] = addr.apt;
+        deliveryRow['הערות משלוח'] = uniqueNotes(notes, cityInfo.city).join(', ');
+        ['רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח'].forEach(function(col) {
+          sources[col] = deliveryRow[col]
+            ? makeSourceInfo(addrHeader, streetRaw, splitNote)
+            : makeSourceInfo(null, '', 'ריק');
+        });
 
-        deliveryRow['אימייל'] = '';
-        sources['אימייל'] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
-
-        deliveryRow['שם פרטי'] = customerName;
-        sources['שם פרטי'] = makeSourceInfo(
-          getSourceHeader(headers, manualMap.customerName),
-          customerName
-        );
-
-        deliveryRow['שם משפחה'] = '';
-        sources['שם משפחה'] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
-
-        const phoneValue = cellValue(rawRow, manualMap.phone);
-        deliveryRow['טלפון'] = phoneValue;
-        sources['טלפון'] = makeSourceInfo(
-          getSourceHeader(headers, manualMap.phone),
-          phoneValue
-        );
-
-        const cityResult = firstValueWithSource(rawRow, ['cityAlt', 'city'], manualMap, headers);
-        deliveryRow['עיר'] = cityResult.value;
-        sources['עיר'] = makeSourceInfo(
-          cityResult.header,
-          cityResult.rawValue,
-          cityResult.header ? '' : 'לא נמצא בפריוריטי'
-        );
-
-        const streetResult = firstValueWithSource(rawRow, ['streetAlt', 'street'], manualMap, headers);
-        deliveryRow['רחוב'] = streetResult.value;
-        sources['רחוב'] = makeSourceInfo(
-          streetResult.header,
-          streetResult.rawValue,
-          streetResult.header ? '' : 'לא נמצא בפריוריטי'
-        );
-
-        const houseRaw = firstValueWithSource(rawRow, ['houseArea', 'houseNum'], manualMap, headers);
-        const houseSplit = splitHouseNumber(houseRaw.value);
-        deliveryRow['מספר בית'] = houseSplit.houseNum;
-        deliveryRow['הערות משלוח'] = houseSplit.deliveryNotes;
-
-        if (houseSplit.deliveryNotes) {
-          sources['הערות משלוח'] = makeSourceInfo(
-            houseRaw.header,
-            houseRaw.rawValue,
-            'טקסט (לא מספר) הועבר ממספר בית להערות משלוח'
-          );
-          sources['מספר בית'] = makeSourceInfo(null, '', 'ריק — הערך הועבר להערות משלוח');
-        } else {
-          sources['מספר בית'] = makeSourceInfo(
-            houseRaw.header,
-            houseSplit.houseNum,
-            houseRaw.header ? '' : 'לא נמצא בפריוריטי'
-          );
-          sources['הערות משלוח'] = makeSourceInfo(null, '', 'ריק');
+        // An order without a delivery address takes what it lacks from the address book (same customer number).
+        const custId = get('custId');
+        const fromBook = [];
+        const book = !ship && custId && abLookup ? abLookup(custId) : null;
+        if (book) {
+          const fill = function(cols) {
+            cols.forEach(function(col) {
+              if (!deliveryRow[col] && book[col]) {
+                deliveryRow[col] = col === 'עיר' ? officialCity(book[col], names).city : book[col];
+                sources[col] = makeSourceInfo('מאגר כתובות', book[col], 'הושלם מהמאגר לפי מס. לקוח ' + custId);
+                fromBook.push(col);
+              }
+            });
+          };
+          if (!deliveryRow['רחוב']) fill(['רחוב', 'מספר בית', 'קומה', 'דירה']);
+          fill(['עיר', 'טלפון']);
         }
 
         deliveryRow['מספר חבילות'] = settings.packageCount;
         sources['מספר חבילות'] = makeSourceInfo('ברירת מחדל', settings.packageCount);
-
-        deliveryRow['מספר משטחים'] = settings.palletCount;
-        sources['מספר משטחים'] = settings.palletCount
-          ? makeSourceInfo('ברירת מחדל', settings.palletCount)
-          : makeSourceInfo(null, '', 'ריק');
-
-        deliveryRow['הערות מיקום'] = settings.locationNotes;
-        sources['הערות מיקום'] = settings.locationNotes
-          ? makeSourceInfo('ברירת מחדל', settings.locationNotes)
-          : makeSourceInfo(null, '', 'ריק');
-
-        deliveryRow['ברכה'] = settings.greeting;
-        sources['ברכה'] = settings.greeting
-          ? makeSourceInfo('ברירת מחדל', settings.greeting)
-          : makeSourceInfo(null, '', 'ריק');
-
-        ['קומה', 'דירה', 'מספר מסמך', 'עמודה ישנה', 'גוביינא', 'מיקוד', 'טלפון יעד 2'].forEach(function(col) {
-          deliveryRow[col] = '';
-          sources[col] = makeSourceInfo(null, '', 'לא ממופה מפריוריטי');
-        });
+        if (settings.palletCount) { deliveryRow['מספר משטחים'] = settings.palletCount; sources['מספר משטחים'] = makeSourceInfo('ברירת מחדל', settings.palletCount); }
+        if (settings.locationNotes) { deliveryRow['הערות מיקום'] = settings.locationNotes; sources['הערות מיקום'] = makeSourceInfo('ברירת מחדל', settings.locationNotes); }
+        if (settings.greeting) { deliveryRow['ברכה'] = settings.greeting; sources['ברכה'] = makeSourceInfo('ברירת מחדל', settings.greeting); }
 
         rows.push(deliveryRow);
         rowSources.push(sources);
+        rowMeta.push({ custId: custId, ship: ship, fromBook: fromBook });
       });
 
       return {
         totalInputRows: parsedData.dataRows.length,
         rows: rows,
         rowSources: rowSources,
+        rowMeta: rowMeta,
         skipped: skipped
       };
     }
@@ -1493,6 +1780,7 @@
       const tagChocolateBtn = document.getElementById('tagChocolateBtn');
       const cancelTagRowsBtn = document.getElementById('cancelTagRowsBtn');
       const tagRowsCount = document.getElementById('tagRowsCount');
+      const problemsBtn = document.getElementById('problemsBtn');
 
       function showAlert(message, type) {
         alertBox.className = 'alert alert-' + (type || 'info');
@@ -1502,40 +1790,17 @@
 
       function hideAlert() { alertBox.classList.add('hidden'); }
 
-      let previewMeasureEl = null;
-
-      function getPreviewMeasureEl() {
-        if (!previewMeasureEl) {
-          previewMeasureEl = document.createElement('span');
-          previewMeasureEl.className = 'preview-measure';
-          document.body.appendChild(previewMeasureEl);
-        }
-        return previewMeasureEl;
-      }
+      // Text is measured on a canvas, never on the table: reading a size from the table after changing a
+      // width makes the browser lay the whole table out again, which froze the page on files of a few hundred rows.
+      let previewMeasureCtx = null;
 
       function measurePreviewText(text) {
-        const el = getPreviewMeasureEl();
-        el.textContent = String(text || '').length ? String(text) : ' ';
-        return el.getBoundingClientRect().width;
-      }
-
-      function getPreviewCharCount(text) {
-        return String(text || '').length;
-      }
-
-      function fitPreviewInput(input, headerText) {
-        const valueWidth = measurePreviewText(input.value);
-        const headerWidth = measurePreviewText(headerText);
-        const targetWidth = Math.ceil(Math.max(valueWidth, headerWidth)) + 24;
-        const charCount = Math.max(
-          getPreviewCharCount(input.value),
-          getPreviewCharCount(headerText),
-          3
-        ) + 1;
-
-        input.size = charCount;
-        input.style.width = targetWidth + 'px';
-        input.style.minWidth = targetWidth + 'px';
+        if (!previewMeasureCtx) {
+          previewMeasureCtx = document.createElement('canvas').getContext('2d');
+        }
+        const size = parseFloat(getComputedStyle(document.documentElement).fontSize || '16') * 0.85;
+        previewMeasureCtx.font = '400 ' + size + 'px Heebo, Arial, sans-serif';
+        return previewMeasureCtx.measureText(String(text || '').length ? String(text) : ' ').width;
       }
 
       function getEmptyPreviewColumns(rows) {
@@ -1557,6 +1822,13 @@
           toggleColumnsBtn.innerHTML = showAllPreviewColumns ? '👁️ הסתר עמודות ריקות' : '👁️ הצג הכל';
         }
 
+        // the widths only need fitting again when a column appeared or disappeared
+        const hiddenKey = DELIVERY_COLUMNS.filter(function(col) {
+          return !showAllPreviewColumns && emptyCols.indexOf(col) >= 0;
+        }).join('|');
+        const changed = hiddenKey !== lastHiddenColumns;
+        lastHiddenColumns = hiddenKey;
+
         DELIVERY_COLUMNS.forEach(function(col) {
           const hidden = !showAllPreviewColumns && emptyCols.indexOf(col) >= 0;
           document.querySelectorAll('[data-column="' + col + '"]').forEach(function(el) {
@@ -1564,9 +1836,12 @@
           });
         });
 
-        schedulePreviewColumnFit();
+        if (changed) schedulePreviewColumnFit();
       }
+      let lastHiddenColumns = null;
 
+      // One width for the whole column: the widest value or the header. All measuring happens before any
+      // width is set.
       function fitPreviewColumn(colName) {
         const table = document.getElementById('previewTable');
         if (!table) return;
@@ -1574,18 +1849,18 @@
         const headCell = table.querySelector('thead th[data-column="' + colName + '"]');
         if (!headCell || headCell.classList.contains('preview-col-hidden')) return;
 
-        const headerText = headCell.textContent;
-        const inputs = table.querySelectorAll(
-          'tbody td[data-column="' + colName + '"] .preview-input'
-        );
-
-        let maxWidth = measurePreviewText(headerText);
+        const inputs = table.querySelectorAll('tbody td[data-column="' + colName + '"] .preview-input');
+        let maxWidth = measurePreviewText(headCell.textContent);
         inputs.forEach(function(input) {
-          fitPreviewInput(input, headerText);
-          maxWidth = Math.max(maxWidth, input.offsetWidth || measurePreviewText(input.value));
+          maxWidth = Math.max(maxWidth, measurePreviewText(input.value));
         });
 
-        const columnWidth = Math.ceil(maxWidth) + 20;
+        const inputWidth = Math.ceil(maxWidth) + 24;
+        const columnWidth = inputWidth + 20;
+        inputs.forEach(function(input) {
+          input.style.width = inputWidth + 'px';
+          input.style.minWidth = inputWidth + 'px';
+        });
         table.querySelectorAll(
           'thead th[data-column="' + colName + '"], tbody td[data-column="' + colName + '"]'
         ).forEach(function(cell) {
@@ -1776,6 +2051,7 @@
         indexes.slice().sort(function(a, b) { return b - a; }).forEach(function(index) {
           convertResult.rows.splice(index, 1);
           if (convertResult.rowSources) convertResult.rowSources.splice(index, 1);
+          if (convertResult.rowMeta) convertResult.rowMeta.splice(index, 1);
         });
 
         document.getElementById('statOutput').textContent = convertResult.rows.length;
@@ -1785,17 +2061,90 @@
         showAlert('נמחקו ' + indexes.length + ' שורות. נשארו ' + convertResult.rows.length + ' משלוחים.', 'info');
       }
 
+      // ---------- flags: what still needs a look in each row ----------
+      // The address-book fields an order can save back for its customer (orders without a delivery address only).
+      const BOOK_FIELDS = ['שם פרטי', 'טלפון', 'עיר', 'רחוב', 'מספר בית', 'קומה', 'דירה', 'הערות משלוח'];
+      let showProblemsOnly = false;
+
+      function rowMetaAt(rowIndex) {
+        return (convertResult && convertResult.rowMeta && convertResult.rowMeta[rowIndex]) || {};
+      }
+
+      function hasProblems(row) {
+        const p = rowProblems(row);
+        return p.red.length + p.yellow.length > 0;
+      }
+
+      function paintRowFlags(rowIndex) {
+        const tr = document.querySelector('#previewBody tr[data-row-index="' + rowIndex + '"]');
+        const row = convertResult && convertResult.rows[rowIndex];
+        if (!tr || !row) return;
+        const p = rowProblems(row);
+        const meta = rowMetaAt(rowIndex);
+        tr.classList.toggle('row-red', p.red.length > 0);
+        tr.classList.toggle('row-yellow', !p.red.length && p.yellow.length > 0);
+        let html = p.red.map(function(f) { return '<span class="flag flag-red">' + escapeHtml(f) + '</span>'; }).join('') +
+          p.yellow.map(function(f) { return '<span class="flag flag-yellow">' + escapeHtml(f) + '</span>'; }).join('');
+        if (meta.fromBook && meta.fromBook.length) {
+          html += '<span class="flag flag-book" title="' + escapeHtml(meta.fromBook.join(', ')) + '">הושלם מהמאגר</span>';
+        }
+        if (meta.bookDirty) {
+          html += meta.bookSaved
+            ? '<span class="flag flag-ok">✓ נשמר במאגר</span>'
+            : '<button type="button" class="btn btn-secondary save-book-btn" data-row-index="' + rowIndex + '">💾 שמור במאגר</button>';
+        }
+        tr.querySelector('td.preview-flags').innerHTML = html || '<span class="flag flag-ok">✓</span>';
+      }
+
+      function updateProblemsButton() {
+        const rows = convertResult ? convertResult.rows : [];
+        const count = rows.filter(hasProblems).length;
+        problemsBtn.classList.toggle('hidden', !count && !showProblemsOnly);
+        problemsBtn.classList.toggle('active', showProblemsOnly);
+        problemsBtn.textContent = showProblemsOnly ? '👁️ הצג את כל השורות' : '⚠️ הצג רק בעייתיות (' + count + ')';
+      }
+
+      async function saveRowToBook(rowIndex, btn) {
+        const row = convertResult && convertResult.rows[rowIndex];
+        const meta = rowMetaAt(rowIndex);
+        if (!row || !meta.custId) return;
+        const data = {};
+        BOOK_FIELDS.forEach(function(col) {
+          const v = String(row[col] || '').trim();
+          if (v) data[col] = v;
+        });
+        btn.disabled = true;
+        try {
+          const saved = await rpc('dlv_ab_save_by_cust', { p_token: authToken, p_cust: meta.custId, p_data: data });
+          addressBook.upsert(saved);
+        } catch (err) {
+          btn.disabled = false;
+          showAlert('לא נשמר במאגר: ' + serverErrorText(err), 'error');
+          return;
+        }
+        meta.bookSaved = true;
+        paintRowFlags(rowIndex);
+        showAlert('הפרטים של ' + (row['שם פרטי'] || 'הלקוח') + ' נשמרו במאגר, ויושלמו בהזמנה הבאה שלו.', 'success');
+      }
+
+      document.addEventListener('dlv-city-resolved', function(e) {
+        paintRowFlags(e.detail);
+        updateProblemsButton();
+      });
+
       function renderPreview(rows) {
         const head = document.getElementById('previewHead');
         const body = document.getElementById('previewBody');
         const previewTitle = document.getElementById('previewTitle');
 
         previewTitle.textContent = 'תצוגה מקדימה (' + rows.length + ' שורות)';
+        lastHiddenColumns = null;   // new cells: fit the widths again
 
         let headerHtml = '';
         if (rowSelectMode || tagMode) {
           headerHtml += '<th class="preview-select"><input type="checkbox" id="selectAllRows" title="בחר הכל"></th>';
         }
+        headerHtml += '<th class="preview-flags">בדיקה</th>';
         headerHtml += getPreviewColumns().map(function(c) {
           const thClass = c === PREVIEW_DELIVERY_DAYS_COL ? 'preview-delivery-days' : 'preview-editable';
           return '<th class="' + thClass + '" data-column="' + escapeHtml(c) + '">' + escapeHtml(c) + '</th>';
@@ -1816,6 +2165,8 @@
         body.innerHTML = '';
         rows.forEach(function(row, rowIndex) {
           const tr = document.createElement('tr');
+          tr.dataset.rowIndex = String(rowIndex);
+          if (showProblemsOnly && !hasProblems(row)) tr.classList.add('preview-row-hidden');
 
           if (rowSelectMode || tagMode) {
             const selectTd = document.createElement('td');
@@ -1831,6 +2182,10 @@
             selectTd.appendChild(checkbox);
             tr.appendChild(selectTd);
           }
+
+          const flagsTd = document.createElement('td');
+          flagsTd.className = 'preview-flags';
+          tr.appendChild(flagsTd);
 
           getPreviewColumns().forEach(function(col) {
             if (col === PREVIEW_DELIVERY_DAYS_COL) {
@@ -1866,6 +2221,14 @@
                 if (col === 'עיר') {
                   updateRowDeliveryDays(rowIndex, input.value);
                 }
+                // an order without a delivery address can save what was fixed here for its customer
+                const meta = rowMetaAt(rowIndex);
+                if (BOOK_FIELDS.indexOf(col) >= 0 && meta.custId && !meta.ship) {
+                  meta.bookDirty = true;
+                  meta.bookSaved = false;
+                }
+                paintRowFlags(rowIndex);
+                updateProblemsButton();
                 fitPreviewColumn(col);
                 applyPreviewColumnVisibility();
               });
@@ -1875,8 +2238,10 @@
           });
 
           body.appendChild(tr);
+          paintRowFlags(rowIndex);
         });
 
+        updateProblemsButton();
         applyPreviewColumnVisibility();
         refreshAllDeliveryDays(rows);
       }
@@ -1966,9 +2331,11 @@
           return;
         }
 
-        try {
-          syncPreviewEdits();
+        syncPreviewEdits();
+        const missing = convertResult.rows.filter(function(row) { return rowProblems(row).red.length; }).length;
+        if (missing && !window.confirm('יש ' + missing + ' משלוחים בלי עיר, רחוב או טלפון (מסומנים באדום). להוריד בכל זאת?')) return;
 
+        try {
           const ws = XLSX.utils.json_to_sheet(convertResult.rows, { header: DELIVERY_COLUMNS });
           const wb = XLSX.utils.book_new();
           XLSX.utils.book_append_sheet(wb, ws, 'Sheet1');
@@ -1997,7 +2364,10 @@
           updateRowSelectUI();
           updateSourceCheckUI();
           hideSourcePopup();
-          convertResult = convert(parsedData, currentColumnMap, DEFAULT_SETTINGS);
+          showProblemsOnly = false;
+          convertResult = convert(parsedData, currentColumnMap, DEFAULT_SETTINGS, function(custId) {
+            return addressBook.byCust ? addressBook.byCust(custId) : null;
+          });
 
           document.getElementById('statInput').textContent = convertResult.totalInputRows;
           document.getElementById('statOutput').textContent = convertResult.rows.length;
@@ -2006,11 +2376,21 @@
           renderPreview(convertResult.rows);
           resultCard.classList.remove('hidden');
 
+          const problems = convertResult.rows.map(rowProblems);
+          const red = problems.filter(function(p) { return p.red.length; }).length;
+          const yellow = problems.filter(function(p) { return !p.red.length && p.yellow.length; }).length;
+          const abroad = convertResult.skipped.filter(function(s) { return s.reason === 'כתובת בחו"ל'; });
+          const fromBook = convertResult.rowMeta.filter(function(m) { return m.fromBook.length; }).length;
+          let msg = 'הומרו ' + convertResult.rows.length + ' משלוחים.';
           if (convertResult.skipped.length) {
-            showAlert('הומרו ' + convertResult.rows.length + ' משלוחים. ' + convertResult.skipped.length + ' שורות דולגו.', 'info');
-          } else {
-            showAlert('הומרו בהצלחה ' + convertResult.rows.length + ' משלוחים. מוכן להורדה!', 'success');
+            msg += ' דולגו ' + convertResult.skipped.length +
+              (abroad.length ? ' (כתובת בחו"ל: ' + abroad.map(function(s) { return s.order || s.name; }).join(', ') + ')' : '') + '.';
           }
+          if (fromBook) msg += ' ' + fromBook + ' הושלמו מהמאגר.';
+          if (red) msg += ' ' + red + ' בלי עיר, רחוב או טלפון (באדום).';
+          if (yellow) msg += ' ' + yellow + ' לבדיקה (בצהוב).';
+          if (!red && !yellow && !convertResult.skipped.length) msg += ' מוכן להורדה!';
+          showAlert(msg, red || yellow || convertResult.skipped.length ? 'info' : 'success');
         } catch (err) {
           showAlert(err.message || 'שגיאה בהמרה', 'error');
         }
@@ -2052,6 +2432,17 @@
       });
 
       downloadBtn.addEventListener('click', downloadConvertedFile);
+
+      problemsBtn.addEventListener('click', function() {
+        syncPreviewEdits();
+        showProblemsOnly = !showProblemsOnly;
+        if (convertResult) renderPreview(convertResult.rows);
+      });
+
+      document.getElementById('previewBody').addEventListener('click', function(e) {
+        const btn = e.target.closest('.save-book-btn');
+        if (btn) saveRowToBook(parseInt(btn.dataset.rowIndex, 10), btn);
+      });
 
       toggleColumnsBtn.addEventListener('click', function() {
         showAllPreviewColumns = !showAllPreviewColumns;
@@ -2152,7 +2543,7 @@
 
         function abNorm(h) {
           return String(h || '')
-            .replace(/[‎‏‪-‮⁦-⁩﻿   ]/g, '')
+            .replace(/[\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff\u00a0\u2007\u202f]/g, '')
             .replace(/[''׳ʼ]/g, "'")
             .replace(/\s+/g, ' ')
             .trim();
@@ -2173,12 +2564,30 @@
           return REQUIRED_FIELDS.filter(function(col) { return !String(row[col] || '').trim(); });
         }
 
+        // _cust: the Priority customer number, which an order's "מס. לקוח" is matched against
         function rowFromServer(item) {
-          const obj = { _abIdx: abNextIdx++, _id: item.id };
+          const obj = { _abIdx: abNextIdx++, _id: item.id, _cust: item.c ? String(item.c) : '' };
           const d = item.d || {};
           DELIVERY_COLUMNS.forEach(function(col) { obj[col] = d[col] != null ? String(d[col]) : ''; });
           return obj;
         }
+
+        addressBook.byCust = function(custId) {
+          const c = String(custId || '').trim();
+          return c ? abRows.find(function(r) { return r._cust === c; }) || null : null;
+        };
+
+        // A customer saved from an order ({id, d, c} from the server): replaces the one already here, or is added.
+        addressBook.upsert = function(item) {
+          const existing = abRows.find(function(r) { return r._id === item.id; });
+          if (existing) {
+            DELIVERY_COLUMNS.forEach(function(col) { existing[col] = item.d && item.d[col] != null ? String(item.d[col]) : ''; });
+            existing._cust = item.c ? String(item.c) : existing._cust;
+          } else {
+            abRows.push(rowFromServer(item));
+          }
+          refreshAbInfo();
+        };
 
         function rowData(row) {
           const d = {};
@@ -2710,23 +3119,26 @@
             .filter(Boolean);
 
           if (!convertResult) {
-            convertResult = { totalInputRows: 0, rows: [], rowSources: [], skipped: [] };
+            convertResult = { totalInputRows: 0, rows: [], rowSources: [], rowMeta: [], skipped: [] };
           }
+          if (!convertResult.rowMeta) convertResult.rowMeta = convertResult.rows.map(function() { return {}; });
 
           selectedRows.forEach(function(entry) {
             const row = entry.row;
             const pkgStr = String(entry.count);
-            const copy = {};
-            DELIVERY_COLUMNS.forEach(function(col) {
-              copy[col] = col === 'מספר חבילות' ? pkgStr : (row[col] || '');
-            });
+            const raw = {};
+            DELIVERY_COLUMNS.forEach(function(col) { raw[col] = row[col] || ''; });
+            // the same cleanup as a Priority order: no ID number in the name, one phone format, the list's city name
+            const copy = cleanDeliveryRow(raw);
+            copy['מספר חבילות'] = pkgStr;
             convertResult.rows.push(copy);
             convertResult.rowSources.push(
               DELIVERY_COLUMNS.reduce(function(acc, col) {
-                acc[col] = { header: 'מאגר כתובות', rawValue: copy[col], note: '' };
+                acc[col] = { header: 'מאגר כתובות', rawValue: raw[col], note: copy[col] !== raw[col] ? 'נוקה מתוך מה שבמאגר' : '' };
                 return acc;
               }, {})
             );
+            convertResult.rowMeta.push({ custId: row._cust, ship: false, fromBook: [] });
           });
 
           document.getElementById('statInput').textContent   = convertResult.totalInputRows;
@@ -3067,6 +3479,7 @@
         if (!map) return;
         window.DELIVERY_CITIES_CACHE = Object.assign(window.DELIVERY_CITIES_CACHE || {}, map);
         Object.keys(deliveryDaysMemoryCache).forEach(function(key) { delete deliveryDaysMemoryCache[key]; });
+        Object.keys(deliveryDaysCacheMisses).forEach(function(key) { delete deliveryDaysCacheMisses[key]; });
         if (convertResult && convertResult.rows.length) refreshAllDeliveryDays(convertResult.rows);
       }
 
