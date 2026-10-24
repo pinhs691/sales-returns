@@ -799,6 +799,113 @@
       .preview-flags { min-width: 130px; }
       .table-card .preview-header { padding: 10px 12px; }
     }
+
+    /* =====================================================================
+       Design v3 — look only (same rule: no ids, classes or script logic changed)
+       ===================================================================== */
+
+    /* ---- 1. More room for the table ---- */
+    body:has(#resultCard:not(.hidden)) .page-title { margin-bottom: 10px; }
+    body:has(#resultCard:not(.hidden)) .page-title h1 { font-size: 1.25rem; }
+    body:has(#resultCard:not(.hidden)) .page-title p { display: none; }
+
+    body:has(#resultCard:not(.hidden)) .top-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: start; margin-bottom: 12px; }
+    body:has(#resultCard:not(.hidden)) .top-row > .card { margin-bottom: 0; }
+    body:has(#resultCard:not(.hidden)) .top-row:has(details[open]) .upload-card,
+    body:has(#resultCard:not(.hidden)) .top-row > details[open] { grid-column: 1 / -1; }
+    body:has(#resultCard:not(.hidden)) .upload-card { padding: 0; display: flex; align-items: stretch; }
+    body:has(#resultCard:not(.hidden)) .upload-card #uploadZone { flex: 1; border-width: 1.5px; border-radius: var(--radius); margin: 6px; padding: 8px 14px; justify-content: flex-start; gap: 14px; font-size: .9rem; color: var(--muted); }
+    body:has(#resultCard:not(.hidden)) .upload-card .file-name { order: -1; color: var(--navy); font-size: .95rem; }
+    body:has(#resultCard:not(.hidden)) details.ab-card > summary { padding: 8px 14px; }
+    body:has(#resultCard:not(.hidden)) details.ab-card:not([open]) .ab-sum-hint { font-size: 0; }
+    body:has(#resultCard:not(.hidden)) details.ab-card .ab-sum-ic { width: 30px; height: 30px; }
+
+    .stats { margin-bottom: 12px; }
+    .stat-box { padding: 8px 16px; gap: 12px; }
+    .stat-value { font-size: 1.3rem; }
+    .stat-label { font-size: .8rem; }
+    .sum-ic { width: 34px; height: 34px; border-radius: 9px; }
+    .sum-ic svg.i { width: 17px; height: 17px; }
+
+    .table-card .preview-wrap { max-height: calc(100vh - 360px); min-height: 260px; }
+    .table-card .preview-header { padding: 10px 16px; }
+
+    /* ---- 2. Messages float over the page ---- */
+    .toast-host { position: fixed; top: 68px; inset-inline: 0; z-index: 2500; display: grid; justify-content: center; pointer-events: none; padding: 0 16px; }
+    .toast-host:has(#alertBox.hidden) { display: none; }
+    .toast-host > * { grid-area: 1 / 1; }
+    .toast-host #alertBox { pointer-events: auto; position: relative; margin: 0; min-width: 300px; max-width: 760px; padding: 12px 46px 12px 44px; border-radius: 12px; font-weight: 600; box-shadow: 0 10px 30px rgba(15,23,42,.18); animation: toast-in .2s ease-out; }
+    .toast-host #alertBox::before { content: ""; position: absolute; inset-inline-start: 14px; top: 50%; width: 20px; height: 20px; margin-top: -10px; background: no-repeat center / contain; }
+    .toast-host #alertBox.alert-info::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231d4ed8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5M12 8h.01'/%3E%3C/svg%3E"); }
+    .toast-host #alertBox.alert-success::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23047857' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='m8 12.5 3 3 5-6'/%3E%3C/svg%3E"); }
+    .toast-host #alertBox.alert-error::before { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12 3 2 20h20L12 3z'/%3E%3Cpath d='M12 10v5M12 18h.01'/%3E%3C/svg%3E"); }
+    .toast-close { pointer-events: auto; justify-self: end; align-self: center; margin-inline-end: 10px; width: 28px; height: 28px; border: 0; border-radius: 8px; background: transparent; color: inherit; opacity: .6; cursor: pointer; display: grid; place-items: center; }
+    .toast-close:hover { opacity: 1; background: rgba(15,23,42,.08); }
+    @keyframes toast-in { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+    /* ---- 3. The check column: narrow, one tag per line, text in full ---- */
+    .preview-table td { vertical-align: middle; }
+    .preview-flags { width: 150px; min-width: 150px; max-width: 150px; white-space: normal; padding: 5px 10px; }
+    .preview-flags .flag { display: block; width: fit-content; margin: 2px 0; padding: 2px 10px; font-size: .74rem; }
+    .preview-flags .save-book-btn { display: block; margin-top: 3px; }
+    .flag-red { background: #dc2626; color: #fff; }
+    .flag-yellow { background: #fef3c7; color: #92400e; box-shadow: inset 0 0 0 1px #fcd34d; }
+    .flag-book { background: #e0f2fe; color: #0369a1; }
+    .flag-ok { background: transparent; color: #16a34a; padding: 0; font-size: .85rem; }
+
+    /* ---- 4. Selection modes: a coloured strip says where you are ---- */
+    .table-card:has(#cancelDeleteRowsBtn:not(.hidden))::before,
+    .table-card:has(#cancelTagRowsBtn:not(.hidden))::before,
+    .table-card:has(#sourceCheckBtn.active)::before { display: block; padding: 9px 16px; color: #fff; font-weight: 600; font-size: .9rem; }
+    .table-card:has(#cancelDeleteRowsBtn:not(.hidden))::before { content: "מצב מחיקה: סמן את השורות שברצונך למחוק, ואז לחץ ״מחק נבחרות״"; background: #dc2626; }
+    .table-card:has(#cancelTagRowsBtn:not(.hidden))::before { content: "מצב תיוג: סמן שורות ובחר תג (שביר או מכיל שוקולדים)"; background: #2563eb; }
+    .table-card:has(#sourceCheckBtn.active)::before { content: "בדיקת מקור: לחץ על תא כדי לראות מאיזו עמודה בפריוריטי נלקח הערך"; background: #d97706; }
+    .table-card:has(#cancelDeleteRowsBtn:not(.hidden)) .preview-table tbody tr:has(.row-select-checkbox:checked) td { background: #fecaca; }
+    .table-card:has(#cancelTagRowsBtn:not(.hidden)) .preview-table tbody tr:has(.row-select-checkbox:checked) td { background: #bfdbfe; }
+    #confirmDeleteRowsBtn:not(:disabled) { background: #dc2626; border-color: #dc2626; color: #fff; }
+    #confirmDeleteRowsBtn:not(:disabled):hover { background: #b91c1c; border-color: #b91c1c; }
+    #tagFragileBtn, #tagChocolateBtn { background: #2563eb; border-color: #2563eb; color: #fff; }
+    #tagFragileBtn:hover:not(:disabled), #tagChocolateBtn:hover:not(:disabled) { background: #1d4ed8; border-color: #1d4ed8; }
+    .preview-toolbar .selected-count { font-weight: 700; color: var(--navy); }
+
+    /* ---- 6. Download bar: one group, a clear button ---- */
+    .btn-success { background: #15803d; box-shadow: 0 2px 8px rgba(21,128,61,.25); }
+    .btn-success:hover:not(:disabled) { background: #166534; box-shadow: 0 4px 12px rgba(21,128,61,.35); }
+    .actionbar-in { justify-content: center; gap: 20px; }
+    .actionbar-in #downloadBtn { margin-inline-start: 0; height: 48px; padding: 0 32px; font-size: 1.05rem; font-weight: 700; border-radius: 12px; }
+    .dl-count { font-weight: 500; opacity: .9; margin-inline-start: 6px; }
+
+    /* ---- 5. Windows and dialogs ---- */
+    .modal-overlay { background: rgba(15, 23, 42, .5); backdrop-filter: blur(2px); }
+    .modal-box { border-radius: 16px; padding: 22px 24px; box-shadow: 0 24px 64px rgba(15, 23, 42, .28); }
+    .modal-head { padding-bottom: 12px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+    .modal-head .modal-title { flex: 1; font-size: 1.2rem; }
+    .modal-x { width: 34px; height: 34px; flex: none; border: 0; border-radius: 10px; background: transparent; color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+    .modal-x:hover { background: var(--bg); color: var(--text); }
+    .modal-subtitle { color: var(--muted); }
+    .modal-cancel { color: var(--muted); border-radius: 8px; }
+    .modal-choice-btn { border-width: 1px; border-radius: 14px; padding: 16px 18px; background: #fff; }
+    .modal-choice-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--brand-soft); display: grid; place-items: center; font-size: 1.6rem; }
+    .field > span { font-size: .85rem; color: #475569; }
+    .field input, .field select { border-radius: 10px; padding: 9px 12px; }
+    .cust-fields { gap: 2px 14px; }
+    #custModal .modal-box { max-width: 560px !important; }
+    .user-form-actions { margin-top: 16px; gap: 10px; }
+    .user-card { background: #fff; border-radius: 14px; padding: 14px 16px; box-shadow: var(--shadow); }
+    .device-row.is-pending { border-color: #f59e0b; background: #fffbeb; }
+    .tag { padding: 2px 10px; }
+    .manage-search { border-radius: 10px; padding: 10px 14px; }
+    .manage-table tbody tr:hover td { background: #f8faff; }
+    .manage-actions .btn { border-radius: 8px; }
+
+    /* ---- tighter rows so more of them fit on screen ---- */
+    .table-card .preview-wrap { max-height: calc(100vh - 395px); }
+    .preview-table th, .preview-table td { padding: 4px 8px; }
+    .preview-table .preview-input { padding: 4px 8px; }
+    .preview-flags { padding: 3px 10px; }
+    .preview-flags .flag { margin: 1px 0; }
+    .table-card .preview-header { padding: 8px 16px; }
+    .table-card .preview-toolbar .btn { height: 34px; }
   </style>
 </head>
 <body>
@@ -826,6 +933,8 @@
       <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
       <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
       <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4M4 4v4h4M4 13a8 8 0 0 0 14.5 4M20 20v-4h-4"/></symbol>
+      <symbol id="i-save" viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5V3z"/><path d="M8 3v5h7V3M8 21v-7h8v7"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/></symbol>
       <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
     </defs>
   </svg>
@@ -902,8 +1011,13 @@
         <p>העלה קובץ ייצוא מהפריוריטי וקבל קובץ מוכן לייבוא (OrdersTemplateDel-he)</p>
       </div>
 
-      <div id="alertBox" class="hidden"></div>
+      <!-- Messages float over the page; the script writes into #alertBox as before -->
+      <div class="toast-host">
+        <div id="alertBox" class="hidden"></div>
+        <button class="toast-close" id="alertClose" type="button" aria-label="סגור הודעה"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
 
+      <div class="top-row">
       <div class="card upload-card">
         <h2>העלאת קובץ פריוריטי</h2>
         <label class="upload-zone" id="uploadZone">
@@ -965,6 +1079,7 @@
         </div>
         </div>
       </details>
+      </div>
 
       <div class="result hidden" id="resultCard">
         <div class="stats">
@@ -1034,7 +1149,7 @@
             <div class="ab-status clear" id="abStatus"></div>
             <button class="btn btn-secondary btn-ghost" id="gotoProblemsBtn" type="button"><svg class="i"><use href="#i-warn"/></svg><span>עבור לשורות הבעייתיות</span></button>
             <button class="btn btn-success" id="downloadBtn" type="button">
-              <svg class="i"><use href="#i-down"/></svg> הורד קובץ לחברת שליחויות
+              <svg class="i"><use href="#i-down"/></svg> הורד קובץ לחברת שליחויות<span class="dl-count" id="dlCount"></span>
             </button>
           </div>
         </div>
@@ -1076,7 +1191,8 @@
     <div class="modal-box modal-wide">
       <div class="modal-head">
         <div class="modal-title" id="usersModalTitle">משתמשים ומכשירים</div>
-        <button class="btn btn-primary" id="addUserBtn" type="button" style="padding:8px 14px;font-size:0.9rem;">➕ משתמש חדש</button>
+        <button class="btn btn-primary" id="addUserBtn" type="button" style="padding:8px 14px;font-size:0.9rem;"><svg class="i"><use href="#i-plus"/></svg> משתמש חדש</button>
+        <button class="modal-x" type="button" data-close="closeUsersBtn" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button>
       </div>
       <div id="usersError" class="alert alert-error modal-error hidden"></div>
       <div id="userFormWrap"></div>
@@ -1090,7 +1206,10 @@
   <!-- Change password -->
   <div id="passwordModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
     <div class="modal-box" style="text-align:right;">
-      <div class="modal-title" id="passwordModalTitle" style="margin-bottom:16px;">החלפת סיסמה</div>
+      <div class="modal-head">
+        <div class="modal-title" id="passwordModalTitle">החלפת סיסמה</div>
+        <button class="modal-x" type="button" data-close="pwCancel" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
       <div id="passwordError" class="alert alert-error modal-error hidden"></div>
       <form id="passwordForm">
         <label class="field"><span>הסיסמה הנוכחית</span><input id="pwOld" type="password" autocomplete="current-password" required></label>
@@ -1116,8 +1235,8 @@
         style="width:70px;padding:8px 10px;border:2px solid var(--border);border-radius:6px;
                font-size:1.15rem;font-weight:700;text-align:center;font-family:inherit;
                color:var(--navy);outline:none;transition:border 0.15s;">
-      <button id="abPkgConfirm" class="btn btn-success" type="button" style="padding:9px 18px;">✓ אשר</button>
-      <button id="abPkgCancel"  class="btn btn-secondary" type="button" style="padding:9px 12px;">✕</button>
+      <button id="abPkgConfirm" class="btn btn-success" type="button" style="padding:9px 18px;"><svg class="i"><use href="#i-check"/></svg> אשר</button>
+      <button id="abPkgCancel"  class="btn btn-secondary" type="button" style="padding:9px 12px;" aria-label="ביטול"><svg class="i"><use href="#i-x"/></svg></button>
     </div>
   </div>
 
@@ -1126,7 +1245,8 @@
     <div class="modal-box modal-wide modal-xwide">
       <div class="modal-head">
         <div class="modal-title" id="abManageTitle">ניהול מאגר הכתובות</div>
-        <button class="btn btn-primary" id="abManageAdd" type="button" style="padding:8px 14px;font-size:0.9rem;">➕ הוסף לקוח</button>
+        <button class="btn btn-primary" id="abManageAdd" type="button" style="padding:8px 14px;font-size:0.9rem;"><svg class="i"><use href="#i-plus"/></svg> הוסף לקוח</button>
+        <button class="modal-x" type="button" data-close="abManageClose" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button>
       </div>
       <div class="manage-filters">
         <input type="text" id="abManageSearch" class="manage-search" placeholder="חפש שם, עיר, רחוב, טלפון...">
@@ -1148,7 +1268,10 @@
   <!-- Address book: one customer (complete missing details on selection, add, edit) -->
   <div id="custModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="custTitle">
     <div class="modal-box" style="text-align:right;max-width:480px;max-height:92vh;overflow:auto;">
-      <div class="modal-title" id="custTitle" style="margin-bottom:6px;"></div>
+      <div class="modal-head">
+        <div class="modal-title" id="custTitle"></div>
+        <button class="modal-x" type="button" data-close="custCancelBtn" aria-label="סגור"><svg class="i"><use href="#i-x"/></svg></button>
+      </div>
       <div class="modal-subtitle" id="custNote" style="margin-bottom:16px;"></div>
       <div id="custError" class="alert alert-error modal-error hidden"></div>
       <form id="custForm" autocomplete="off">
@@ -1156,7 +1279,7 @@
         <label class="field hidden" id="custPkgField"><span>כמה קרטונים?</span>
           <input type="number" id="custPkgInput" value="1" min="1" max="999" style="width:100px;"></label>
         <div class="user-form-actions">
-          <button class="btn btn-success" type="submit" id="custSaveBtn" style="padding:10px 22px;">✓ אישור</button>
+          <button class="btn btn-success" type="submit" id="custSaveBtn" style="padding:10px 22px;"><svg class="i"><use href="#i-check"/></svg> אישור</button>
           <button class="btn btn-secondary" type="button" id="custCancelBtn">ביטול</button>
         </div>
       </form>
@@ -2356,7 +2479,7 @@
         if (meta.bookDirty) {
           html += meta.bookSaved
             ? '<span class="flag flag-ok">✓ נשמר במאגר</span>'
-            : '<button type="button" class="btn btn-secondary save-book-btn" data-row-index="' + rowIndex + '">💾 שמור במאגר</button>';
+            : '<button type="button" class="btn btn-secondary save-book-btn" data-row-index="' + rowIndex + '"><svg class="i"><use href="#i-save"/></svg> שמור במאגר</button>';
         }
         tr.querySelector('td.preview-flags').innerHTML = html || '<span class="flag flag-ok">✓</span>';
       }
@@ -3254,8 +3377,8 @@
             const missing = missingFields(r);
             return '<tr>' +
               '<td><div class="manage-actions">' +
-                '<button class="btn btn-secondary" type="button" data-act="edit" data-idx="' + r._abIdx + '">✏️ עריכה</button>' +
-                '<button class="btn btn-danger" type="button" data-act="delete" data-idx="' + r._abIdx + '" title="מחיקה">🗑️</button>' +
+                '<button class="btn btn-secondary" type="button" data-act="edit" data-idx="' + r._abIdx + '"><svg class="i"><use href="#i-edit"/></svg> עריכה</button>' +
+                '<button class="btn btn-danger" type="button" data-act="delete" data-idx="' + r._abIdx + '" title="מחיקה"><svg class="i"><use href="#i-trash"/></svg></button>' +
               '</div></td>' +
               '<td>' + abEscapeHtml(r['שם פרטי']) + '</td>' +
               '<td>' + abEscapeHtml(r['טלפון']) + '</td>' +
@@ -3858,7 +3981,7 @@
                 (pending ? 'ביקש ' + formatWhen(d.created_at) : (d.last_login ? 'נכנס ' + formatWhen(d.last_login) : '')) +
               '</span>' +
               '<span class="spacer"></span>' +
-              (pending ? '<button class="btn btn-success" type="button" data-act="approve" data-id="' + d.id + '">✓ אשר</button>' : '') +
+              (pending ? '<button class="btn btn-success" type="button" data-act="approve" data-id="' + d.id + '"><svg class="i"><use href="#i-check"/></svg> אשר</button>' : '') +
               '<button class="btn btn-danger" type="button" data-act="remove" data-id="' + d.id + '">' + (pending ? 'דחה' : 'הסר') + '</button>' +
             '</div>';
           }).join('') : '<div class="device-none">עוד לא נכנס מאף מכשיר</div>';
@@ -4026,6 +4149,37 @@
       tile.addEventListener('click', showProblemRows);
       tile.addEventListener('keydown', function(e) {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showProblemRows(); }
+      });
+
+      // Messages: the page writes into #alertBox as before; here it just fades after a few seconds
+      // (errors stay until closed) and can be closed with the X.
+      const alertBox = document.getElementById('alertBox');
+      let alertTimer = null;
+      function hideToast() { clearTimeout(alertTimer); alertBox.classList.add('hidden'); }
+      document.getElementById('alertClose').addEventListener('click', hideToast);
+      new MutationObserver(function() {
+        clearTimeout(alertTimer);
+        if (alertBox.classList.contains('hidden') || alertBox.classList.contains('alert-error')) return;
+        const long = alertBox.textContent.trim().indexOf('הומרו') === 0;
+        alertTimer = setTimeout(hideToast, long ? 12000 : 6000);
+      }).observe(alertBox, { attributes: true, attributeFilter: ['class'], childList: true, characterData: true, subtree: true });
+
+      // Download button: how many shipments the file will hold
+      const outCount = document.getElementById('statOutput');
+      const dlCount = document.getElementById('dlCount');
+      function paintDlCount() {
+        const n = parseInt(outCount.textContent, 10);
+        dlCount.textContent = n ? '(' + n + ' משלוחים)' : '';
+      }
+      new MutationObserver(paintDlCount).observe(outCount, { childList: true, characterData: true, subtree: true });
+      paintDlCount();
+
+      // Windows: the X in the corner does what the existing close/cancel button does
+      document.querySelectorAll('.modal-x').forEach(function(x) {
+        x.addEventListener('click', function() {
+          const target = document.getElementById(x.getAttribute('data-close'));
+          if (target) target.click();
+        });
       });
     })();
   </script>
