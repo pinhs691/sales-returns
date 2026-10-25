@@ -380,6 +380,7 @@
     }
     .file-chip .note.open { -webkit-line-clamp: unset; display: block; }
     .file-chip .fwarn { display: block; margin-top: 3px; color: var(--amber); font-size: 0.74rem; font-weight: 700; }
+    .file-chip .finfo { display: block; margin-top: 3px; color: var(--accent); font-size: 0.74rem; font-weight: 700; }
 
     .hint {
       margin-top: 12px;
@@ -610,6 +611,11 @@
     .ov-files { margin: 8px 0 0; padding-inline-start: 18px; font-size: 0.86rem; }
     .ov-files li { margin-bottom: 4px; }
     .ov-files small { display: block; color: var(--amber); font-weight: 700; }
+    .ov-changed { margin: 10px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--accent-light); font-size: 0.86rem; }
+    .ov-changed ul { margin: 6px 0 0; padding-inline-start: 18px; }
+    .ov-changed li { margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+    .ov-changed em { font-style: normal; color: var(--amber); font-weight: 800; }
+    .ov-changed small { display: block; margin-top: 4px; color: var(--amber); font-weight: 700; }
     .ov-actions { display: flex; flex-direction: column; gap: 8px; padding: 0 18px 16px; }
     .ov-actions .btn { width: 100%; }
     .ov-actions small { color: var(--muted); font-size: 0.74rem; font-weight: 600; margin-top: -4px; text-align: center; }
@@ -2269,6 +2275,7 @@
             <b>מס. לקוח</b> ו־<b>שם לקוח</b> — כולל הרבה לקוחות באותו קובץ.
             אפשר להעלות קבצים של הרבה לקוחות יחד, ואז לבחור למי להפיק את הדוח.
             תעודה שכבר קיימת בקובץ אחר באותה חבילה לא נספרת פעמיים: בהעלאה תתבקשו לבחור מה לעשות איתה.
+            אם השתנו בה שורות מאז (למשל נוספו שורות בפריוריטי), הגרסה מהקובץ החדש נספרת במקום הישנה.
             בדוח המסכם, לחיצה על הכמות ב־<b>נשלח</b> או ב־<b>חזר</b> מציגה את התעודות.
           </div>
         </details>
@@ -3363,10 +3370,17 @@
 
     // ---------- documents the admin took out of the reports ----------
     // A file keeps all of its rows in f.raw; f.items is what the reports count: f.raw without the
-    // documents taken out in this package. Everything that describes the file itself (its dates,
-    // its row count, the duplicate check) reads f.raw.
+    // documents taken out in this package, and without the documents a newer file has a newer version
+    // of (f._older). Everything that describes the file itself (its dates, its row count, the duplicate
+    // check) reads f.raw.
     function rowsOf(f) {
       return f.raw || f.items || [];
+    }
+
+    // The rows of a file that are the current version of their document (taken-out ones included)
+    function currentRows(f) {
+      const older = f._older;
+      return older && older.size ? rowsOf(f).filter(it => !older.has(docKey(it))) : rowsOf(f);
     }
 
     function exclKey(kind, doc) {
@@ -3377,11 +3391,49 @@
       return !!doc && state.excluded.has(exclKey(kind, doc));
     }
 
+    // A document in more than one file of the same kind (for example a return that got more lines in
+    // Priority after it was uploaded): the file uploaded last holds its current version, and the older
+    // files' rows of it are not counted. f._older: the documents of f that a newer file replaces;
+    // f._newer: file → how many of f's documents it replaces.
+    function markDocVersions() {
+      ['shipped', 'returns'].forEach(kind => {
+        const files = state[kind].filter(f => f.raw)
+          .map((f, i) => ({ f, i }))
+          .sort((a, b) => String(a.f.createdAt).localeCompare(String(b.f.createdAt)) || a.i - b.i)
+          .map(x => x.f);
+        const owner = new Map();
+        files.forEach(f => fileDocs(f).forEach(d => owner.set(d, f)));
+        files.forEach(f => {
+          f._older = new Set();
+          f._newer = new Map();
+          fileDocs(f).forEach(d => {
+            const o = owner.get(d);
+            if (o === f) return;
+            f._older.add(d);
+            f._newer.set(o, (f._newer.get(o) || 0) + 1);
+          });
+        });
+      });
+    }
+
+    let versionsSig = '';
+
     function applyExclusions() {
+      markDocVersions();
+      versionsSig = docVersionsSig();
       state.shipped.concat(state.returns).forEach(f => {
         if (!f.raw) return;
-        f.items = state.excluded.size ? f.raw.filter(it => !isExcluded(f.kind, docKey(it))) : f.raw;
+        const older = f._older;
+        f.items = state.excluded.size || (older && older.size)
+          ? f.raw.filter(it => { const d = docKey(it); return !isExcluded(f.kind, d) && !(older && older.has(d)); })
+          : f.raw;
       });
+    }
+
+    // what the counted rows depend on; renderAll applies the rules again when it changed
+    function docVersionsSig() {
+      return ['shipped', 'returns'].map(k => state[k].map(f => f.id + (f.raw ? '+' : '-') + f.createdAt).join(',')).join('|') +
+        '|' + Array.from(state.excluded.keys()).join(',');
     }
 
     // The admin's button in a document's own view. where: 'doc' | 'high' | 'glufa' | 'list' (which view to draw again)
@@ -3420,7 +3472,7 @@
       const hits = [];
       ['shipped', 'returns'].forEach(kind => {
         const lines = [];
-        state[kind].forEach(f => rowsOf(f).forEach(it => { if (docKey(it) === doc) lines.push(it); }));
+        state[kind].forEach(f => currentRows(f).forEach(it => { if (docKey(it) === doc) lines.push(it); }));
         if (!lines.length) return;
         const names = Array.from(new Set(lines.map(l => customerInfo(l.customerId).name)));
         hits.push({
@@ -4641,7 +4693,7 @@
       const overlaps = fileOverlapNotes(files);
       list.innerHTML = files.map(f => {
         const notes = overlaps.get(f.id) || [];
-        const warn = f.warning || notes.length ? ' warn' : '';
+        const warn = f.warning || notes.some(n => !n.info) ? ' warn' : '';
         const span = fileSpan(f);
         const cust = fileCustomerMeta(rowsOf(f));
         const bits = [];
@@ -4655,7 +4707,7 @@
             '<span class="meta" title="' + escapeHtml(bits.join(' · ')) + '">' + escapeHtml(bits.join(' · ')) + '</span>' +
             (f.note ? '<span class="note" data-note title="' + escapeHtml(f.note) + '">' + escapeHtml(f.note) + '</span>' : '') +
             (f.warning ? '<span class="fwarn">' + escapeHtml(f.warning) + '</span>' : '') +
-            notes.map(n => '<span class="fwarn">' + escapeHtml(n) + '</span>').join('') +
+            notes.map(n => '<span class="' + (n.info ? 'finfo' : 'fwarn') + '">' + escapeHtml(n.text) + '</span>').join('') +
           '</div>' +
           (isAdmin()
             ? '<div class="chip-acts">' +
@@ -4725,8 +4777,8 @@
     }
 
     // ---------- the same document in two files ----------
-    // A document number appears in one export only, so a document found in two files of the same
-    // kind in one package would be counted twice.
+    // A document number appears once per kind in a package. When it is in two files, the file
+    // uploaded last holds its current version (markDocVersions), so it is never counted twice.
     function docKey(item) {
       return String(item.doc || '').trim();
     }
@@ -4740,8 +4792,24 @@
       return f._docs;
     }
 
-    // Which of these rows' documents are in the given files already, and in which file
-    function overlapWith(items, files) {
+    // Each document's lines as one comparable text (SKU and quantity; order does not matter)
+    function docContents(rows, only) {
+      const map = new Map();
+      rows.forEach(it => {
+        const d = docKey(it);
+        if (!d || (only && !only.has(d))) return;
+        if (!map.has(d)) map.set(d, []);
+        map.get(d).push(String(it.sku || '').trim().toLowerCase() + '|' + (Number(it.qty) || 0));
+      });
+      const out = new Map();
+      map.forEach((lines, d) => out.set(d, { n: lines.length, key: lines.sort().join(';') }));
+      return out;
+    }
+
+    // Which of these rows' documents are in the given files already, and in which file. With
+    // compare (a new upload): which of those changed since (changed: doc → {was, now} lines),
+    // and which are exactly the same (same).
+    function overlapWith(items, files, compare) {
       const docs = new Set();
       items.forEach(it => { const k = docKey(it); if (k) docs.add(k); });
       const dup = new Set();
@@ -4751,27 +4819,35 @@
         fileDocs(f).forEach(d => { if (docs.has(d)) { n++; dup.add(d); } });
         if (n) hits.push({ file: f, n, extra: fileDocs(f).size - n });
       });
-      return { docs, dup, hits };
+      const changed = new Map();
+      const same = new Set();
+      if (compare && dup.size) {
+        const now = docContents(items, dup);
+        const was = docContents([].concat(...files.map(currentRows)), dup);
+        dup.forEach(d => {
+          const a = was.get(d);
+          const b = now.get(d);
+          if (a && b && a.key === b.key) same.add(d);
+          else changed.set(d, { was: a ? a.n : 0, now: b ? b.n : 0 });
+        });
+      }
+      return { docs, dup, hits, changed, same, compared: !!compare };
     }
 
-    // Warnings shown on files that already overlap (for example from before this check existed)
+    // Notes on files that share documents: which file's version of them is counted
     function fileOverlapNotes(files) {
       const notes = new Map();
-      const add = (f, text) => { if (!notes.has(f.id)) notes.set(f.id, []); notes.get(f.id).push(text); };
+      // info: a note that only explains (blue), not a warning
+      const add = (f, text, info) => { if (!notes.has(f.id)) notes.set(f.id, []); notes.get(f.id).push({ text, info: !!info }); };
+      files.forEach(a => {
+        (a._newer || new Map()).forEach((n, b) => {
+          add(a, (n === 1 ? 'תעודה אחת מכאן נספרת' : n + ' תעודות מכאן נספרות') + ' לפי הגרסה החדשה ב«' + fileDisplayName(b) + '»', true);
+          add(b, (n === 1 ? 'תעודה אחת כאן מחליפה' : n + ' תעודות כאן מחליפות') + ' גרסה ישנה ב«' + fileDisplayName(a) + '»', true);
+        });
+      });
       files.forEach((a, i) => {
         files.forEach((b, j) => {
           if (i === j) return;
-          if (j > i) {
-            let n = 0;
-            const small = fileDocs(a).size <= fileDocs(b).size ? [fileDocs(a), fileDocs(b)] : [fileDocs(b), fileDocs(a)];
-            small[0].forEach(d => { if (small[1].has(d)) n++; });
-            if (n) {
-              const what = n === 1 ? 'תעודה אחת נמצאת גם ב«' : n + ' תעודות נמצאות גם ב«';
-              const tail = n === 1 ? '» ונספרת פעמיים' : '» ונספרות פעמיים';
-              add(a, what + fileDisplayName(b) + tail);
-              add(b, what + fileDisplayName(a) + tail);
-            }
-          }
           const sa = fileSpan(a);
           const sb = fileSpan(b);
           if (sa.noDoc && sa.noDocMin && sb.min && sa.noDocMin <= sb.max && sa.noDocMax >= sb.min) {
@@ -5261,6 +5337,7 @@
     }
 
     function renderAll() {
+      if (docVersionsSig() !== versionsSig) applyExclusions();
       custNamesCache = null;
       unitsCache = null;
       saveView();
@@ -5411,12 +5488,12 @@
         .sort((a, b) => String(a.doc).localeCompare(String(b.doc), 'he', { numeric: true }));
     }
 
-    // all the lines of one document, also when it was taken out of the reports
+    // all the lines of one document (its current version), also when it was taken out of the reports
     function collectDocLines(kind, doc) {
       const lines = [];
       const files = kind === 'returns' ? state.returns : state.shipped;
       files.forEach(f => {
-        rowsOf(f).forEach(item => {
+        currentRows(f).forEach(item => {
           if (!customerMatches(item.customerId)) return;
           if (!dateInRange(item.date, kind)) return;
           if ((item.doc || 'ללא מספר תעודה') !== doc) return;
@@ -5578,7 +5655,7 @@
 
     function glufaDocs(all) {
       const docs = new Map();
-      state.shipped.forEach(f => rowsOf(f).forEach(item => {
+      state.shipped.forEach(f => currentRows(f).forEach(item => {
         if (!item.mark) return;
         const doc = docKey(item);
         if (!doc) return;
@@ -5592,7 +5669,7 @@
         if (!d.date && item.date) d.date = item.date;
       }));
       // the lines and quantity of the whole document, not only its M rows
-      state.shipped.forEach(f => rowsOf(f).forEach(item => {
+      state.shipped.forEach(f => currentRows(f).forEach(item => {
         const d = docs.get(docKey(item));
         if (!d) return;
         d.lines = (d.lines || 0) + 1;
@@ -5647,7 +5724,7 @@
       if (!d) return;
       glufaCtx.openDoc = doc;
       const lines = [];
-      state.shipped.forEach(f => rowsOf(f).forEach(item => { if (docKey(item) === doc) lines.push(item); }));
+      state.shipped.forEach(f => currentRows(f).forEach(item => { if (docKey(item) === doc) lines.push(item); }));
       document.getElementById('glufaTitle').textContent = doc;
       document.getElementById('glufaSub').textContent = [d.date, d.name, countText(lines.length, 'שורה אחת', 'שורות')].filter(Boolean).join(' · ');
       const total = lines.reduce((s, r) => s + (Number(r.qty) || 0), 0);
@@ -6029,17 +6106,18 @@
               toast(file.name + ': לא נמצאו שורות עם מק״ט', 'err');
               continue;
             }
-            // documents that are in this package already would be counted twice
+            // documents that are in this package already: the same ones stay out, changed ones
+            // (lines added or removed in Priority since) go in and their new version is counted
             let items = parsed.items;
             let note = '';
-            const ov = overlapWith(items, state[kind]);
+            const ov = overlapWith(items, state[kind], true);
             if (ov.dup.size) {
               overlay.classList.remove('show');
               const choice = await askOverlap({ verb: 'upload', name: file.name, ov });
               overlay.classList.add('show');
               if (choice === 'cancel') continue;
               if (choice === 'new') {
-                items = items.filter(it => !ov.dup.has(docKey(it)));
+                items = items.filter(it => !ov.same.has(docKey(it)));
                 note = skippedNote(ov);
                 if (!items.length) continue;
               } else {
@@ -6077,8 +6155,15 @@
 
     // The note a file gets when only its new documents went in, so it is clear later why it is smaller
     function skippedNote(ov) {
+      const where = ov.hits.map(h => '«' + fileDisplayName(h.file) + '»').join(', ');
+      if (ov.compared) {
+        const parts = [];
+        if (ov.same.size) parts.push((ov.same.size === 1 ? 'תעודה אחת זהה שכבר הייתה' : ov.same.size + ' תעודות זהות שכבר היו') + ' ב' + where + (ov.same.size === 1 ? ' לא נכנסה.' : ' לא נכנסו.'));
+        if (ov.changed.size) parts.push((ov.changed.size === 1 ? 'תעודה אחת עודכנה' : ov.changed.size + ' תעודות עודכנו') + ' (השתנו בהן שורות), והגרסה מכאן היא שנספרת.');
+        return 'נכנסו התעודות החדשות והמעודכנות. ' + parts.join(' ');
+      }
       return 'נכנסו רק התעודות החדשות: ' + (ov.dup.size === 1 ? 'תעודה אחת שכבר הייתה' : ov.dup.size + ' תעודות שכבר היו') + ' ב' +
-        ov.hits.map(h => '«' + fileDisplayName(h.file) + '»').join(', ') + (ov.dup.size === 1 ? ' לא נכנסה.' : ' לא נכנסו.');
+        where + (ov.dup.size === 1 ? ' לא נכנסה.' : ' לא נכנסו.');
     }
 
     async function trashFiles(files) {
@@ -6101,24 +6186,48 @@
         restore: { only: 'שחזר רק את', full: 'שחזר את הקובץ המלא' },
         move: { only: 'העבר רק את', full: 'העבר את הקובץ המלא' }
       }[opts.verb];
-      document.getElementById('overlapTitle').textContent = fresh
+      // a new upload also brings the documents that changed since (more or fewer lines)
+      const changed = ov.compared ? ov.changed.size : 0;
+      const goesIn = fresh + changed;
+      document.getElementById('overlapTitle').textContent = fresh || changed
         ? 'חלק מהתעודות כבר נמצאות בחבילה'
-        : 'כל התעודות בקובץ כבר נמצאות בחבילה';
+        : ov.compared ? 'כל התעודות בקובץ כבר נמצאות בחבילה, בלי שינוי' : 'כל התעודות בקובץ כבר נמצאות בחבילה';
       document.getElementById('overlapSub').textContent = '«' + cleanFileName(opts.name) + '»';
       const docs = (n) => countText(n, 'תעודה אחת', 'תעודות');
+      let changedHtml = '';
+      if (changed) {
+        const rows = Array.from(ov.changed.entries());
+        const fewer = rows.filter(([, c]) => c.now < c.was).length;
+        changedHtml = '<div class="ov-changed"><b>' + (changed === 1 ? 'תעודה אחת עודכנה' : fmtNum(changed) + ' תעודות עודכנו') +
+          ' מאז שהועלו (השתנו בהן שורות). הגרסה מהקובץ הזה תיספר במקום הישנה:</b><ul>' +
+          rows.slice(0, 8).map(([d, c]) => '<li>' + escapeHtml(d) + ': ' + countText(c.was, 'שורה אחת', 'שורות') + ' ← ' + countText(c.now, 'שורה אחת', 'שורות') +
+            (c.now < c.was ? ' <em>ירדו שורות</em>' : '') + '</li>').join('') +
+          (rows.length > 8 ? '<li>ועוד ' + fmtNum(rows.length - 8) + '</li>' : '') + '</ul>' +
+          (fewer ? '<small>' + (fewer === 1 ? 'בתעודה אחת' : 'ב־' + fewer + ' תעודות') + ' יש עכשיו פחות שורות. אם זה קובץ ישן מהפריוריטי, עדיף לבטל.</small>' : '') +
+          '</div>';
+      }
       document.getElementById('overlapText').innerHTML =
         'בקובץ ' + (ov.docs.size === 1 ? 'יש תעודה אחת' : 'יש ' + fmtNum(ov.docs.size) + ' תעודות') + '. ' +
+        (ov.compared
+          ? [fresh ? (fresh === 1 ? 'תעודה אחת חדשה' : fmtNum(fresh) + ' חדשות') : '',
+              changed ? (changed === 1 ? 'תעודה אחת עודכנה' : fmtNum(changed) + ' עודכנו') : '',
+              ov.same.size ? (ov.same.size === 1 ? 'תעודה אחת זהה למה שכבר יש' : fmtNum(ov.same.size) + ' זהות למה שכבר יש') : '']
+              .filter(Boolean).join(' · ') + '. '
+          : '') +
         (ov.dup.size === ov.docs.size ? (ov.docs.size === 1 ? 'היא כבר נמצאת ב:' : 'כולן כבר נמצאות ב:') :
           (ov.dup.size === 1 ? 'אחת מהן כבר נמצאת ב:' : fmtNum(ov.dup.size) + ' מהן כבר נמצאות ב:')) +
         '<ul class="ov-files">' + ov.hits.map(h =>
           '<li><b>«' + escapeHtml(fileDisplayName(h.file)) + '»</b> · ' + docs(h.n) +
           (h.extra > 0 ? '<small>יש בו עוד ' + docs(h.extra) + ' שאין בקובץ החדש. אם תחליפו אותו, ' +
             (h.extra === 1 ? 'היא תצא' : 'הן ייצאו') + ' מהדוח.</small>' : '') +
-          '</li>').join('') + '</ul>' +
-        'אם שני הקבצים יישארו, התעודות האלה ייספרו פעמיים.';
+          '</li>').join('') + '</ul>' + changedHtml +
+        (ov.compared ? '' : 'תעודה שנמצאת בשני קבצים נספרת פעם אחת, לפי הקובץ שהועלה אחרון.');
       const btnNew = document.getElementById('ovNew');
-      btnNew.hidden = fresh === 0;
-      btnNew.textContent = verbs.only + ' ' + (fresh === 1 ? 'התעודה החדשה' : fmtNum(fresh) + ' התעודות החדשות');
+      btnNew.hidden = ov.compared ? goesIn === 0 : fresh === 0;
+      btnNew.textContent = ov.compared
+        ? 'העלה ' + [fresh ? (fresh === 1 ? 'את התעודה החדשה' : 'את ' + fmtNum(fresh) + ' החדשות') : '',
+            changed ? (changed === 1 ? 'את התעודה המעודכנת' : 'את ' + fmtNum(changed) + ' המעודכנות') : ''].filter(Boolean).join(' ו')
+        : verbs.only + ' ' + (fresh === 1 ? 'התעודה החדשה' : fmtNum(fresh) + ' התעודות החדשות');
       document.getElementById('ovReplace').textContent = verbs.full + ' והחלף את ' +
         (ov.hits.length === 1 ? '«' + fileDisplayName(ov.hits[0].file) + '»' : ov.hits.length + ' הקבצים הקיימים');
       document.getElementById('ovReplaceNote').textContent = ov.hits.length === 1
