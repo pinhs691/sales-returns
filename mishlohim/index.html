@@ -1709,7 +1709,9 @@
       { key: 'streetAlt', label: 'רחוב - כתובת', deliveryTargets: ['רחוב'], sourceNames: ['רחוב - כתובת'] },
       { key: 'street', label: 'רחוב (גיבוי)', deliveryTargets: ['רחוב'], sourceNames: ['רחוב'], excludePatterns: ['כתובת'], hidden: true },
       { key: 'houseArea', label: 'אזור / שכונה - כתובת', deliveryTargets: ['מספר בית'], sourceNames: ['אזור / שכונה - כתובת'] },
-      { key: 'houseNum', label: 'מספר בנין (גיבוי)', deliveryTargets: ['מספר בית'], sourceNames: ['מספר בנין', 'מספר בית', 'בית'], hidden: true }
+      { key: 'houseNum', label: 'מספר בנין (גיבוי)', deliveryTargets: ['מספר בית'], sourceNames: ['מספר בנין', 'מספר בית', 'בית'], hidden: true },
+      // some Priority exports keep the customer's house number under this name instead
+      { key: 'houseNum2', label: 'אזור / שכונה (גיבוי)', deliveryTargets: ['מספר בית'], sourceNames: ['אזור / שכונה'], hidden: true }
     ];
 
     function normalizeHeader(value) {
@@ -2081,10 +2083,13 @@
       const skipped = [];
       const headers = parsedData.headers;
       const names = knownCityNames();
-      const src = function(key) { return getSourceHeader(headers, manualMap[key]); };
+      // the customer's house number: "מספר בנין" if the file has it, otherwise "אזור / שכונה"
+      const useAltHouse = manualMap.houseNum === undefined || manualMap.houseNum === null || manualMap.houseNum < 0;
+      const mapKey = function(key) { return key === 'houseNum' && useAltHouse ? 'houseNum2' : key; };
+      const src = function(key) { return getSourceHeader(headers, manualMap[mapKey(key)]); };
 
       parsedData.dataRows.forEach(function(rawRow, index) {
-        const get = function(key) { return cellValue(rawRow, manualMap[key]); };
+        const get = function(key) { return cellValue(rawRow, manualMap[mapKey(key)]); };
         const orderId = get('orderId');
         const nameRaw = get('customerName');
 
