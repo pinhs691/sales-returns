@@ -1985,8 +1985,14 @@
       out.phones = out.phones.concat(t.phones);
       let h = cleanText(takeFloorAndApt(t.rest, out));
       m = h.match(/^(\d+)\s*([א-ת](?=\s|$))?\s*(?:\/\s*(\d+))?(.*)$/);
-      if (m) {
+      if (m && out.house && m[1] !== out.house.replace(/\D/g, '')) {
+        // the street already has a house number and this one is different: a plain number is the apartment,
+        // anything else stays as a note so nothing is lost
+        const plain = h.match(/^(\d+)\s*([א-ת])?$/);
+        if (plain && !out.apt) { out.apt = plain[1] + (plain[2] || ''); h = ''; }
+      } else if (m) {
         if (!out.house) out.house = m[1] + (m[2] || '');
+        else if (m[2] && !/[א-ת]/.test(out.house)) out.house += m[2];
         if (m[3] && !out.apt) out.apt = m[3];
         h = cleanText(m[4]);
       }
@@ -2088,7 +2094,10 @@
         }
 
         // A delivery address on the order wins as a whole: nothing is mixed in from the customer's own address.
-        const ship = !!(get('cityAlt') || get('streetAlt') || get('houseArea'));
+        let ship = !!(get('cityAlt') || get('streetAlt') || get('houseArea'));
+        // a delivery address with only a city, the same as the customer's city: the street is the customer's
+        if (ship && !get('streetAlt') && !get('houseArea') && get('city') && (get('street') || get('houseNum')) &&
+            officialCity(get('cityAlt'), names).city === officialCity(get('city'), names).city) ship = false;
         const keys = ship ? ['cityAlt', 'streetAlt', 'houseArea'] : ['city', 'street', 'houseNum'];
         const cityRaw = get(keys[0]);
         const streetRaw = get(keys[1]);
