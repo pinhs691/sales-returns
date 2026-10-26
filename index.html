@@ -569,6 +569,10 @@
     }
     .cl-agent span { color: var(--muted); font-weight: 600; }
     .cl-agent:hover, .cl-agent.on { border-color: #b7c4f0; background: var(--accent-light); color: var(--accent); }
+    /* the agent filter above the customer picker */
+    .agent-bar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 0 0 10px; }
+    .agent-bar[hidden] { display: none; }
+    .agent-bar .agent-label { font-weight: 700; color: var(--muted); font-size: 0.9rem; margin-inline-end: 2px; }
     .cl-actions { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px 0; }
     .cl-filter { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 18px 8px; }
     .cl-filter input, .cl-filter select {
@@ -1976,8 +1980,20 @@
     }
 
     .print-header { display: none; }
+    #custPctPrint { display: none; }
     @media print {
       @page { margin: 12mm 10mm; }
+      /* the customers list of "אחוזי החזרה לפי לקוח" prints on a page of its own */
+      body.print-cpct > *:not(#custPctPrint) { display: none !important; }
+      body.print-cpct #custPctPrint { display: block; direction: rtl; color: #000; font-size: 11pt; }
+      #custPctPrint h2 { margin: 0 0 4px; font-size: 16pt; }
+      #custPctPrint p { margin: 0 0 10px; color: #444; }
+      #custPctPrint table { width: 100%; border-collapse: collapse; }
+      #custPctPrint th, #custPctPrint td { border: 1px solid #999; padding: 4px 6px; text-align: right; }
+      #custPctPrint th { background: #eee; }
+      #custPctPrint thead { display: table-header-group; }
+      #custPctPrint tr { break-inside: avoid; }
+      #custPctPrint tfoot td { font-weight: 700; background: #f3f3f3; }
       body { background: #fff; padding: 0; margin: 0; }
       .no-print { display: none !important; }
       .col-act { display: none !important; }
@@ -2280,6 +2296,7 @@
           </div>
         </details>
         <div class="no-print customer-block" id="customerCard" hidden>
+          <div class="agent-bar" id="agentBar" hidden></div>
           <div class="cust-search-wrap">
             <input type="search" class="extra-search" id="custSearch" placeholder="חיפוש לקוח או חנות, לפי שם או מספר...">
           </div>
@@ -2727,7 +2744,9 @@
           <button type="button" data-cmode="qty" class="on">כמות</button>
           <button type="button" data-cmode="money">₪</button>
         </div>
+        <button type="button" class="btn btn-ghost btn-sm" id="custPctZero" aria-pressed="false" title="רק לקוחות שנשלחה אליהם סחורה ועוד לא החזירו כלום">בלי החזרות בכלל</button>
         <button type="button" class="btn btn-success btn-sm" id="custPctExport">ייצוא לאקסל</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="custPctPdf">הדפסה / PDF</button>
       </div>
       <div class="modal-body" id="custPctBody"></div>
     </div>
@@ -3118,6 +3137,10 @@
       pricing.discounts = new Map();
       pricing.loaded = false;
       pricing.sig = '';
+      agentScope.map = new Map();
+      agentScope.names = [];
+      agentScope.counts = new Map();
+      agentScope.current = '';
       state.onlyUnseen = false;
       document.getElementById('onlyUnseen').checked = false;
       lastSeenSig = '';
@@ -3380,7 +3403,10 @@
     // The rows of a file that are the current version of their document (taken-out ones included)
     function currentRows(f) {
       const older = f._older;
-      return older && older.size ? rowsOf(f).filter(it => !older.has(docKey(it))) : rowsOf(f);
+      const agent = agentScope.current;
+      return (older && older.size) || agent
+        ? rowsOf(f).filter(it => !(older && older.has(docKey(it))) && (!agent || agentScope.map.get(it.customerId || '') === agent))
+        : rowsOf(f);
     }
 
     function exclKey(kind, doc) {
@@ -3424,8 +3450,12 @@
       state.shipped.concat(state.returns).forEach(f => {
         if (!f.raw) return;
         const older = f._older;
-        f.items = state.excluded.size || (older && older.size)
-          ? f.raw.filter(it => { const d = docKey(it); return !isExcluded(f.kind, d) && !(older && older.has(d)); })
+        const agent = agentScope.current;
+        f.items = state.excluded.size || (older && older.size) || agent
+          ? f.raw.filter(it => {
+              const d = docKey(it);
+              return !isExcluded(f.kind, d) && !(older && older.has(d)) && (!agent || agentScope.map.get(it.customerId || '') === agent);
+            })
           : f.raw;
       });
     }
@@ -3433,7 +3463,7 @@
     // what the counted rows depend on; renderAll applies the rules again when it changed
     function docVersionsSig() {
       return ['shipped', 'returns'].map(k => state[k].map(f => f.id + (f.raw ? '+' : '-') + f.createdAt).join(',')).join('|') +
-        '|' + Array.from(state.excluded.keys()).join(',');
+        '|' + Array.from(state.excluded.keys()).join(',') + '|' + agentScope.current;
     }
 
     // The admin's button in a document's own view. where: 'doc' | 'high' | 'glufa' | 'list' (which view to draw again)
@@ -3462,7 +3492,8 @@
       const docs = new Set();
       state.shipped.concat(state.returns).forEach(f => rowsOf(f).forEach(it => {
         const d = docKey(it);
-        if (d && isExcluded(f.kind, d) && customerMatches(it.customerId)) docs.add(f.kind + '|' + d);
+        if (d && isExcluded(f.kind, d) && customerMatches(it.customerId) &&
+            (!agentScope.current || agentScope.map.get(it.customerId || '') === agentScope.current)) docs.add(f.kind + '|' + d);
       }));
       return docs.size;
     }
@@ -4062,6 +4093,10 @@
     }
 
     function reportScopeLabel() {
+      return reportScopeBase() + agentSuffix();
+    }
+
+    function reportScopeBase() {
       if (!state.selectedIds) return 'כל הלקוחות';
       const ids = Array.from(state.selectedIds);
       if (!ids.length) return 'לא נבחרו לקוחות';
@@ -4130,6 +4165,7 @@
         return;
       }
 
+      renderAgentBar();
       const stats = collectCustomerStats();
       const byStore = new Map();
       BOX_ORDER.forEach(store => byStore.set(store, []));
@@ -4183,8 +4219,8 @@
         const nameHit = !q || ('חנות ' + store).toLowerCase().includes(q);
         const rowHits = custGroupMatches(rows, q);
         if (!nameHit && !rowHits.length) return;
-        // a user limited to some agents does not get empty tiles of stores that are not his
-        if (!isAdmin() && me && Array.isArray(me.agents) && !rows.some(r => r.sentRows + r.returnRows > 0)) return;
+        // a user limited to some agents (or looking at one agent) does not get empty tiles of stores that are not his
+        if (((!isAdmin() && me && Array.isArray(me.agents)) || agentScope.current) && !rows.some(r => r.sentRows + r.returnRows > 0)) return;
         shown++;
         const sentRows = rows.reduce((s, r) => s + r.sentRows, 0);
         const returnRows = rows.reduce((s, r) => s + r.returnRows, 0);
@@ -4384,16 +4420,80 @@
     // with no discount is counted at the price itself, without VAT (the user's rule).
     const pricing = { vat: 18, prices: new Map(), discounts: new Map(), loaded: false };
 
+    // ---------- the agent filter (for a user who sees all customers) ----------
+    // map: customer number → agent, names: the agents (most customers first), current: the agent chosen
+    // in the customer picker ('' = everyone). The choice is kept on this device for this user.
+    // A user limited to some agents gets an empty map from the server, so he has no filter.
+    const agentScope = { map: new Map(), names: [], counts: new Map(), current: '' };
+    const AGENT_KEY = 'svr-agent';
+
+    function storedAgent() {
+      try {
+        const v = JSON.parse(localStorage.getItem(AGENT_KEY) || 'null');
+        return v && me && v.user === me.id && typeof v.agent === 'string' ? v.agent : '';
+      } catch (e) { return ''; }
+    }
+
+    function storeAgent() {
+      try { localStorage.setItem(AGENT_KEY, JSON.stringify({ user: me.id, agent: agentScope.current })); } catch (e) {}
+    }
+
+    function setAgentMap(obj) {
+      agentScope.map = new Map(Object.entries(obj || {}));
+      const counts = new Map();
+      agentScope.map.forEach(a => counts.set(a, (counts.get(a) || 0) + 1));
+      agentScope.counts = counts;
+      agentScope.names = Array.from(counts.keys()).sort((a, b) => counts.get(b) - counts.get(a) || a.localeCompare(b, 'he'));
+      // a remembered agent that is gone from the list (or a user who is now limited) means everyone
+      if (!agentScope.current) agentScope.current = storedAgent();
+      if (!counts.has(agentScope.current)) agentScope.current = '';
+    }
+
+    function agentSuffix() {
+      return agentScope.current ? ' · סוכן ' + agentScope.current : '';
+    }
+
+    // The chips above the customer picker; hidden when there is no agent to choose from
+    function renderAgentBar() {
+      const bar = document.getElementById('agentBar');
+      if (!agentScope.names.length) {
+        bar.hidden = true;
+        bar.innerHTML = '';
+        return;
+      }
+      bar.hidden = false;
+      const chip = (agent, text, n) =>
+        '<button type="button" class="cl-agent' + (agentScope.current === agent ? ' on' : '') + '" data-agent="' + escapeHtml(agent) + '">' +
+        escapeHtml(text) + (n ? ' <span>' + fmtNum(n) + '</span>' : '') + '</button>';
+      bar.innerHTML = '<span class="agent-label">סוכן:</span>' + chip('', 'הכול', 0) +
+        agentScope.names.map(a => chip(a, a, agentScope.counts.get(a))).join('');
+    }
+
+    function chooseAgent(agent) {
+      if (agent === agentScope.current) return;
+      agentScope.current = agent;
+      storeAgent();
+      // the customers picked belong to the other view of the data
+      state.selectedIds = null;
+      state.combineStores = false;
+      state.mergedStores.clear();
+      state.focusStoreId = '';
+      applyExclusions();
+      renderAll();
+    }
+
     async function loadPricing() {
       try {
         const r = await call('svr_pricing') || {};
+        setAgentMap(r.agents);
         pricing.vat = Number(r.vat);
         if (!isFinite(pricing.vat)) pricing.vat = 18;
         pricing.prices = new Map(Object.entries(r.prices || {}).map(([k, v]) => [k, Number(v)]));
         pricing.discounts = new Map(Object.entries(r.discounts || {}).map(([k, v]) => [k, Number(v)]));
         pricing.loaded = pricing.prices.size > 0;
         const sum = m => Array.from(m.values()).reduce((s, v) => s + v, 0);
-        pricing.sig = [pricing.vat, pricing.prices.size, sum(pricing.prices), pricing.discounts.size, sum(pricing.discounts)].join('|');
+        pricing.sig = [pricing.vat, pricing.prices.size, sum(pricing.prices), pricing.discounts.size, sum(pricing.discounts),
+          agentScope.map.size, agentScope.current].join('|');
       } catch (err) {
         if (err.code === 'AUTH') throw err;
       }
@@ -5695,7 +5795,7 @@
       glufaCtx.openDoc = null;
       const customers = new Set(rows.map(r => custUnitKey(r.customerId)));
       document.getElementById('glufaTitle').textContent = 'גלופה';
-      document.getElementById('glufaSub').textContent = (glufaCtx.all ? 'כל הלקוחות בחבילה' : reportScopeLabel()) + ' · ' +
+      document.getElementById('glufaSub').textContent = (glufaCtx.all ? 'כל הלקוחות בחבילה' + agentSuffix() : reportScopeLabel()) + ' · ' +
         countText(rows.length, 'תעודה אחת', 'תעודות') + (customers.size > 1 ? ' אצל ' + customers.size + ' לקוחות' : '') +
         ' · לחיצה על תעודה מציגה את הפירוט';
       const body = document.getElementById('glufaBody');
@@ -5790,7 +5890,8 @@
       renderHighReturnList();
     }
 
-    const custPct = { sortKey: 'pct', sortDir: 'desc' };
+    // zeroOnly: only the customers that were sent goods and have not returned anything yet
+    const custPct = { sortKey: 'pct', sortDir: 'desc', zeroOnly: false };
 
     function customerPctRows() {
       const map = new Map();
@@ -5824,19 +5925,24 @@
         pctAmt: calcPct(row.sentAmt, row.retAmt)
       }));
       const q = (document.getElementById('custPctSearch').value || '').trim().toLowerCase();
-      const shown = q ? rows.filter(row => (row.name + ' ' + row.id).toLowerCase().includes(q)) : rows;
+      let shown = q ? rows.filter(row => (row.name + ' ' + row.id).toLowerCase().includes(q)) : rows;
+      if (custPct.zeroOnly) shown = shown.filter(row => row.sent > 0 && row.returned === 0);
       return sortRows(shown, custPct.sortKey, custPct.sortDir);
     }
 
     function renderCustPct() {
       const rows = customerPctRows();
+      const zeroBtn = document.getElementById('custPctZero');
+      zeroBtn.className = 'btn btn-sm ' + (custPct.zeroOnly ? 'btn-primary' : 'btn-ghost');
+      zeroBtn.setAttribute('aria-pressed', custPct.zeroOnly ? 'true' : 'false');
+      document.getElementById('custPctTitle').textContent = custPct.zeroOnly ? 'לקוחות שעוד לא החזירו סחורה' : 'אחוזי החזרה לפי לקוח';
       const mark = (key) => custPct.sortKey === key
         ? '<span class="sort">' + (custPct.sortDir === 'asc' ? '▲' : '▼') + '</span>' : '';
-      document.getElementById('custPctSub').textContent = rows.length + ' לקוחות' +
+      document.getElementById('custPctSub').textContent = rows.length + ' לקוחות' + agentSuffix() +
         (hasDateFilter() ? ' · לפי סינון התאריכים הפעיל' : '') + ' · לחיצה על שם לקוח מציגה את הדוח שלו';
       const body = document.getElementById('custPctBody');
       if (!rows.length) {
-        body.innerHTML = '<div class="modal-empty">לא נמצאו לקוחות.</div>';
+        body.innerHTML = '<div class="modal-empty">' + (custPct.zeroOnly ? 'כל הלקוחות כבר החזירו משהו.' : 'לא נמצאו לקוחות.') + '</div>';
         return;
       }
       const totals = totalsOf(rows);
@@ -5878,6 +5984,7 @@
 
     function openCustPctModal() {
       document.getElementById('custPctSearch').value = '';
+      custPct.zeroOnly = false;
       renderCustPct();
       document.getElementById('custPctModal').classList.add('show');
     }
@@ -5893,7 +6000,8 @@
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, sheetFromRows(rows.map(r => Object.assign({
           'לקוח': r.name,
-          'מס. לקוח': r.id,
+          'מס. לקוח': r.id
+        }, agentScope.map.size ? { 'סוכן': custPctAgent(r) } : {}, {
           'נשלח': r.sent,
           'חזר': r.returned,
           'יתרה': r.net,
@@ -5903,13 +6011,55 @@
           'חזר ₪': Math.round(r.retAmt),
           'מכר ₪': Math.round(r.sentAmt - r.retAmt),
           'אחוז החזרה ₪': r.pctAmt === null ? '' : Math.round(r.pctAmt * 10) / 10
-        } : {}))), 'אחוזי החזרה לפי לקוח');
+        } : {}))), custPct.zeroOnly ? 'בלי החזרות' : 'אחוזי החזרה לפי לקוח');
         markRtl(wb);
-        downloadWorkbook(wb, 'אחוזי-החזרה-לפי-לקוח-' + new Date().toISOString().slice(0, 10) + '.xlsx')
+        downloadWorkbook(wb, (custPct.zeroOnly ? 'לקוחות-בלי-החזרות-' : 'אחוזי-החזרה-לפי-לקוח-') + new Date().toISOString().slice(0, 10) + '.xlsx')
           .then(() => toast('הטבלה ירדה לאקסל', 'ok'), saveFailed);
       } catch (e) {
         toast('ייצוא האקסל נכשל', 'err');
       }
+    }
+
+    // the agent of a row of this list (a store's customer numbers share one)
+    function custPctAgent(r) {
+      const names = Array.from(new Set(r.ids.map(id => agentScope.map.get(id)).filter(Boolean)));
+      return names.join(', ');
+    }
+
+    // Printing the list (the browser's print window also saves it as a PDF): the list is put on a
+    // page of its own, and everything else on the screen is hidden while it prints.
+    function printCustPct() {
+      const rows = customerPctRows();
+      if (!rows.length) { toast('אין נתונים להדפסה', 'err'); return; }
+      const money = pricing.loaded;
+      const agents = agentScope.map.size > 0;
+      const title = custPct.zeroOnly ? 'לקוחות שעוד לא החזירו סחורה' : 'אחוזי החזרה לפי לקוח';
+      const pct = (v) => v === null ? '—' : (Math.round(v * 10) / 10) + '%';
+      const totals = totalsOf(rows);
+      const sub = [packageName(), agentScope.current ? 'סוכן ' + agentScope.current : '',
+        hasDateFilter() ? 'לפי סינון התאריכים הפעיל' : '', rows.length + ' לקוחות',
+        new Date().toLocaleDateString('he-IL')].filter(Boolean).join(' · ');
+      const el = document.createElement('div');
+      el.id = 'custPctPrint';
+      el.innerHTML = '<h2>' + escapeHtml(title) + '</h2><p>' + escapeHtml(sub) + '</p>' +
+        '<table><thead><tr><th>לקוח</th><th>מס. לקוח</th>' + (agents ? '<th>סוכן</th>' : '') +
+        '<th>נשלח</th><th>חזר</th><th>יתרה</th><th>% החזרה</th>' + (money ? '<th>נשלח ₪</th>' : '') + '</tr></thead><tbody>' +
+        rows.map(r => '<tr><td>' + escapeHtml(r.name) + '</td><td>' + escapeHtml(r.id || '—') + '</td>' +
+          (agents ? '<td>' + escapeHtml(custPctAgent(r)) + '</td>' : '') +
+          '<td>' + fmtNum(r.sent) + '</td><td>' + fmtNum(r.returned) + '</td><td>' + fmtNum(r.net) + '</td><td>' + pct(r.pct) + '</td>' +
+          (money ? '<td>' + (r.sentAmt > 0 ? fmtMoney(r.sentAmt) : '—') + '</td>' : '') + '</tr>').join('') +
+        '</tbody><tfoot><tr><td>סה״כ</td><td></td>' + (agents ? '<td></td>' : '') +
+        '<td>' + fmtNum(totals.sent) + '</td><td>' + fmtNum(totals.returned) + '</td><td>' + fmtNum(totals.sent - totals.returned) + '</td><td>' + pct(totals.pct) + '</td>' +
+        (money ? '<td>' + fmtMoney(totals.sentAmt) + '</td>' : '') + '</tr></tfoot></table>';
+      document.body.appendChild(el);
+      document.body.classList.add('print-cpct');
+      const done = () => {
+        document.body.classList.remove('print-cpct');
+        el.remove();
+        window.removeEventListener('afterprint', done);
+      };
+      window.addEventListener('afterprint', done);
+      window.print();
     }
 
     const overReturn = { sortKey: 'excess', sortDir: 'desc' };
@@ -8416,7 +8566,7 @@ renderTable();
 
     document.getElementById('btnSendMsg').addEventListener('click', () => openSend(null, ''));
     document.getElementById('btnNotifyReport').addEventListener('click', () => {
-      openSend(reportLink(), 'תסתכל על הדוח של ' + reportScopeLabel() + (packageName() ? ' · ' + packageName() : ''));
+      openSend(reportLink(), 'תסתכל על הדוח של ' + reportScopeBase() + (packageName() ? ' · ' + packageName() : ''));
     });
     document.getElementById('sendTo').addEventListener('change', (e) => {
       const all = e.target.closest('[data-send-all]');
@@ -8886,6 +9036,11 @@ renderTable();
       window.addEventListener(type, (e) => e.preventDefault());
     });
 
+    document.getElementById('agentBar').addEventListener('click', (e) => {
+      const chip = e.target.closest('[data-agent]');
+      if (chip) chooseAgent(chip.dataset.agent);
+    });
+
     document.getElementById('btnCustAll').addEventListener('click', () => {
       if (!isAdmin()) return;
       state.allCust = true;
@@ -8977,6 +9132,12 @@ renderTable();
     });
     document.getElementById('custPctSearch').addEventListener('input', renderCustPct);
     document.getElementById('custPctExport').addEventListener('click', exportCustPct);
+    document.getElementById('custPctPdf').addEventListener('click', printCustPct);
+    document.getElementById('custPctZero').addEventListener('click', () => {
+      custPct.zeroOnly = !custPct.zeroOnly;
+      if (custPct.zeroOnly) { custPct.sortKey = 'sent'; custPct.sortDir = 'desc'; }
+      renderCustPct();
+    });
     document.getElementById('custPctMode').addEventListener('click', (e) => {
       const b = e.target.closest('[data-cmode]');
       if (!b) return;
