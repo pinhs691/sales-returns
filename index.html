@@ -2751,6 +2751,23 @@
       <div class="modal-body" id="custPctBody"></div>
     </div>
   </div>
+  <div class="modal-backdrop no-print" id="pdfOptModal">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="pdfOptTitle">
+      <div class="modal-head">
+        <div>
+          <h3 id="pdfOptTitle">הדפסה / PDF</h3>
+          <p>האם להוסיף לדוח את העמודה של המחיר (נשלח ₪)?</p>
+        </div>
+        <button type="button" class="modal-close" id="pdfOptClose" aria-label="סגור">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="ov-actions">
+          <button type="button" class="btn btn-primary" data-pdf-price="1">עם עמודת מחיר</button>
+          <button type="button" class="btn btn-ghost" data-pdf-price="0">בלי עמודת מחיר</button>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="modal-backdrop no-print" id="overReturnModal">
     <div class="modal-box wide over-box" role="dialog" aria-modal="true" aria-labelledby="overReturnTitle">
       <div class="modal-head">
@@ -6028,10 +6045,17 @@
 
     // Printing the list (the browser's print window also saves it as a PDF): the list is put on a
     // page of its own, and everything else on the screen is hidden while it prints.
-    function printCustPct() {
+    // With prices loaded, the user first chooses whether the page gets the price column
+    function askPrintCustPct() {
+      if (!customerPctRows().length) { toast('אין נתונים להדפסה', 'err'); return; }
+      if (!pricing.loaded) { printCustPct(false); return; }
+      document.getElementById('pdfOptModal').classList.add('show');
+    }
+
+    function printCustPct(withPrice) {
       const rows = customerPctRows();
       if (!rows.length) { toast('אין נתונים להדפסה', 'err'); return; }
-      const money = pricing.loaded;
+      const money = pricing.loaded && !!withPrice;
       const agents = agentScope.map.size > 0;
       const title = custPct.zeroOnly ? 'לקוחות שעוד לא החזירו סחורה' : 'אחוזי החזרה לפי לקוח';
       const pct = (v) => v === null ? '—' : (Math.round(v * 10) / 10) + '%';
@@ -9132,7 +9156,15 @@ renderTable();
     });
     document.getElementById('custPctSearch').addEventListener('input', renderCustPct);
     document.getElementById('custPctExport').addEventListener('click', exportCustPct);
-    document.getElementById('custPctPdf').addEventListener('click', printCustPct);
+    document.getElementById('custPctPdf').addEventListener('click', askPrintCustPct);
+    document.getElementById('pdfOptClose').addEventListener('click', () => document.getElementById('pdfOptModal').classList.remove('show'));
+    document.getElementById('pdfOptModal').addEventListener('click', (e) => {
+      if (e.target.id === 'pdfOptModal') { e.target.classList.remove('show'); return; }
+      const b = e.target.closest('[data-pdf-price]');
+      if (!b) return;
+      document.getElementById('pdfOptModal').classList.remove('show');
+      printCustPct(b.dataset.pdfPrice === '1');
+    });
     document.getElementById('custPctZero').addEventListener('click', () => {
       custPct.zeroOnly = !custPct.zeroOnly;
       if (custPct.zeroOnly) { custPct.sortKey = 'sent'; custPct.sortDir = 'desc'; }
@@ -9392,7 +9424,7 @@ renderTable();
         closeThread();
         return true;
       }
-      const top = ['fileEditModal', 'pkgModal', 'trackModal', 'custListModal', 'itemsModal', 'inboxModal', 'sendModal', 'sentModal', 'restoreModal', 'passwordModal', 'usersModal'].find(shown);
+      const top = ['pdfOptModal', 'fileEditModal', 'pkgModal', 'trackModal', 'custListModal', 'itemsModal', 'inboxModal', 'sendModal', 'sentModal', 'restoreModal', 'passwordModal', 'usersModal'].find(shown);
       if (top) {
         document.getElementById(top).classList.remove('show');
         return true;
