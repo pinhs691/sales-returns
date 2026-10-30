@@ -2035,6 +2035,7 @@
       <div class="ob-mark" data-icon="chart"></div>
       <h1>מכירות מול החזרות</h1>
       <p id="authIntro">מתחבר...</p>
+      <button type="button" class="btn btn-primary" id="authPasskey" hidden>כניסה עם טביעת אצבע</button>
       <div class="field" id="authNameField" hidden>
         <label for="authName">שם מלא</label>
         <input type="text" id="authName" autocomplete="name">
@@ -2128,6 +2129,7 @@
       <div class="drawer-foot">
         <div class="user-chip"><b id="userName"></b><span id="userRole"></span></div>
         <button type="button" class="drawer-item" id="btnInstall" hidden>התקנה כאפליקציה</button>
+        <button type="button" class="drawer-item" id="btnPasskey" hidden>כניסה עם טביעת אצבע</button>
         <button type="button" class="drawer-item" id="btnPassword">החלפת סיסמה</button>
         <button type="button" class="drawer-item" id="btnLogout">יציאה</button>
       </div>
@@ -2399,6 +2401,24 @@
           <button type="submit" class="btn btn-primary">שמירת הסיסמה</button>
         </div>
       </form>
+    </div>
+  </div>
+  <div class="modal-backdrop no-print" id="passkeyModal">
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="passkeyTitle">
+      <div class="modal-head">
+        <div>
+          <h3 id="passkeyTitle">כניסה עם טביעת אצבע</h3>
+          <p>במקום להקליד סיסמה, נכנסים עם טביעת האצבע (או זיהוי הפנים) של המכשיר. הסיסמה נשארת כגיבוי. כל מכשיר מפעילים בנפרד.</p>
+        </div>
+        <button type="button" class="modal-close" id="passkeyClose" aria-label="סגור">×</button>
+      </div>
+      <div class="modal-body">
+        <div id="passkeyList"></div>
+        <div class="form-error" id="passkeyError" hidden></div>
+        <div class="form-actions" style="padding: 12px 0 4px;">
+          <button type="button" class="btn btn-primary" id="passkeyAdd">הפעלה במכשיר הזה</button>
+        </div>
+      </div>
     </div>
   </div>
   <div class="modal-backdrop no-print" id="fileEditModal">
@@ -2995,6 +3015,55 @@
       return data;
     }
 
+    // ---------- sign-in with a fingerprint (a passkey) ----------
+    // The device keeps a private key behind its fingerprint / face / PIN check; the server keeps only the
+    // public key. Signing in goes through the Edge Function svr-passkey, which checks the signature and
+    // opens the session (the admin's approval of the device still applies). This device remembers which
+    // keys it holds, so the button shows only where one was set up.
+    const PASSKEY_KEY = 'svr-passkeys';
+    const PASSKEY_URL = SUPA_URL + '/functions/v1/svr-passkey';
+    let passkeyAvailable = false;
+
+    function bufToB64u(buf) {
+      const bytes = new Uint8Array(buf);
+      let s = '';
+      bytes.forEach(b => { s += String.fromCharCode(b); });
+      return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+
+    function b64uToBuf(s) {
+      const b = atob(String(s).replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(String(s).length / 4) * 4, '='));
+      return Uint8Array.from(b, c => c.charCodeAt(0)).buffer;
+    }
+
+    function storedPasskeys() {
+      try {
+        const list = JSON.parse(localStorage.getItem(PASSKEY_KEY) || '[]');
+        return Array.isArray(list) ? list.filter(x => typeof x === 'string') : [];
+      } catch (e) { return []; }
+    }
+
+    function storePasskeys(list) {
+      try { localStorage.setItem(PASSKEY_KEY, JSON.stringify(list)); } catch (e) {}
+    }
+
+    function passkeyUsable() {
+      return passkeyAvailable && storedPasskeys().length > 0;
+    }
+
+    function updatePasskeyUi() {
+      document.getElementById('authPasskey').hidden = !(authMode === 'login' && passkeyUsable());
+      document.getElementById('btnPasskey').hidden = !passkeyAvailable;
+    }
+
+    async function detectPasskeys() {
+      try {
+        passkeyAvailable = !!(window.PublicKeyCredential && window.isSecureContext && navigator.credentials &&
+          await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
+      } catch (e) { passkeyAvailable = false; }
+      updatePasskeyUi();
+    }
+
     // ---------- sign out after an hour without use ----------
     // The server ends an unused session after the same hour (svr_idle in the SQL file).
     const IDLE_MINUTES = 60;
@@ -3086,7 +3155,12 @@
       BAD_DISCOUNT: 'הנחה צריכה להיות בין 0 ל־100',
       BAD_PRICE: 'המחיר לא יכול להיות שלילי',
       BAD_VAT: 'מע״מ צריך להיות בין 0 ל־50',
-      BAD_ID: 'חסר מספר מזהה'
+      BAD_ID: 'חסר מספר מזהה',
+      BAD_PASSKEY: 'טביעת האצבע לא זוהתה. היכנסו עם סיסמה והפעילו אותה מחדש בתפריט',
+      TOO_MANY_PASSKEYS: 'אפשר להפעיל עד 8 מכשירים. הסירו אחד מהם קודם',
+      PASSKEY: 'הכניסה בטביעת אצבע נכשלה. נסו שוב או היכנסו עם סיסמה',
+      PASSKEY_UNSUPPORTED: 'הדפדפן הזה לא תומך בהפעלת טביעת אצבע. נסו Chrome או Safari מעודכנים',
+      BUSY: 'השרת עסוק כרגע. נסו שוב בעוד רגע'
     };
 
     function errText(err) {
@@ -3131,6 +3205,7 @@
       show('authDeviceField', mode === 'login' && !deviceKnown());
       show('authSubmit', form);
       show('authRetry', mode === 'error');
+      updatePasskeyUi();
       document.getElementById('authPass').value = '';
       document.getElementById('authPass').autocomplete = mode === 'setup' ? 'new-password' : 'current-password';
       document.getElementById('authSubmit').textContent = mode === 'setup' ? 'יצירת מנהל וכניסה' : 'כניסה';
@@ -9424,7 +9499,7 @@ renderTable();
         closeThread();
         return true;
       }
-      const top = ['pdfOptModal', 'fileEditModal', 'pkgModal', 'trackModal', 'custListModal', 'itemsModal', 'inboxModal', 'sendModal', 'sentModal', 'restoreModal', 'passwordModal', 'usersModal'].find(shown);
+      const top = ['passkeyModal', 'pdfOptModal', 'fileEditModal', 'pkgModal', 'trackModal', 'custListModal', 'itemsModal', 'inboxModal', 'sendModal', 'sentModal', 'restoreModal', 'passwordModal', 'usersModal'].find(shown);
       if (top) {
         document.getElementById(top).classList.remove('show');
         return true;
@@ -9624,12 +9699,7 @@ renderTable();
           if (res && res.error === 'DEVICE_PENDING') document.getElementById('authPass').value = '';
           return;
         }
-        token = res.token;
-        me = res.user;
-        storeToken();
-        try { localStorage.setItem(DEVICE_OK_KEY, '1'); } catch (err) {}
-        document.getElementById('authPass').value = '';
-        await enterApp();
+        await finishLogin(res);
       } catch (err) {
         setAuthError(errText(err));
       } finally {
@@ -9637,6 +9707,56 @@ renderTable();
       }
     });
     document.getElementById('authRetry').addEventListener('click', boot);
+
+    // a sign-in went through (password or fingerprint): {token, user}
+    async function finishLogin(res) {
+      token = res.token;
+      me = res.user;
+      storeToken();
+      try { localStorage.setItem(DEVICE_OK_KEY, '1'); } catch (err) {}
+      document.getElementById('authPass').value = '';
+      await enterApp();
+    }
+
+    document.getElementById('authPasskey').addEventListener('click', async () => {
+      if (authMode !== 'login') return;
+      const btn = document.getElementById('authPasskey');
+      btn.disabled = true;
+      setAuthError('');
+      try {
+        const begin = await rpc('svr_passkey_begin_login');
+        const cred = await navigator.credentials.get({ publicKey: {
+          challenge: b64uToBuf(begin.challenge), rpId: location.hostname, userVerification: 'required', timeout: 60000,
+          allowCredentials: storedPasskeys().map(id => ({ type: 'public-key', id: b64uToBuf(id) }))
+        } });
+        const r = cred.response;
+        let res;
+        try {
+          const resp = await fetch(PASSKEY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: cred.id, authenticatorData: bufToB64u(r.authenticatorData), clientDataJSON: bufToB64u(r.clientDataJSON),
+              signature: bufToB64u(r.signature), device: deviceKey, label: deviceLabel(), name: document.getElementById('authDevice').value.trim()
+            })
+          });
+          res = await resp.json();
+        } catch (e) {
+          throw { code: 'NETWORK' };
+        }
+        if (!res || res.error) {
+          setAuthError(errText({ code: res && res.error }));
+          return;
+        }
+        await finishLogin(res);
+      } catch (err) {
+        setAuthError(err && err.name === 'NotAllowedError'
+          ? 'הכניסה בטביעת אצבע בוטלה. אפשר להיכנס עם סיסמה'
+          : errText(err && err.code ? err : { code: 'PASSKEY' }));
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     document.getElementById('btnLogout').addEventListener('click', () => {
       const old = token;
@@ -9798,15 +9918,22 @@ renderTable();
           (devs.length
             ? devs.map(deviceRowHtml).join('')
             : '<div class="dev-none">אין מכשירים. בקשת האישור תופיע כאן אחרי שהמשתמש ינסה להיכנס.</div>') +
+          passkeysCache.filter(k => k.user_id === u.id).map(k =>
+            '<div class="dev-row"><div class="dev-info"><b>טביעת אצבע · ' + escapeHtml(k.label || 'מכשיר') + '</b>' +
+            '<span class="dev-meta">הופעלה ב־' + escapeHtml(fmtWhen(k.created_at)) +
+            (k.last_used ? ' · כניסה אחרונה ' + escapeHtml(fmtWhen(k.last_used)) : '') + '</span></div>' +
+            '<div class="dev-acts"><button type="button" class="btn btn-ghost btn-sm" data-pk-admin="' + escapeHtml(k.id) + '" data-confirm>הסר</button></div></div>').join('') +
           '</div>';
       }).join('');
     }
 
     async function loadUsers() {
       try {
-        const lists = await Promise.all([call('svr_users_list'), call('svr_devices_list'), call('svr_customers_list')]);
+        const lists = await Promise.all([call('svr_users_list'), call('svr_devices_list'), call('svr_customers_list'),
+          call('svr_passkeys_all').catch(err => { if (err.code === 'AUTH') throw err; return []; })]);
         usersCache = lists[0] || [];
         devicesCache = lists[1] || [];
+        passkeysCache = lists[3] || [];
         agentNames = agentCounts(((lists[2] || {}).rows || []).filter(r => r.agent)).map(([a]) => a);
         // the form was drawn before the agents arrived
         const editing = editUserId ? usersCache.find(u => u.id === editUserId) : null;
@@ -9831,6 +9958,25 @@ renderTable();
       if (e.target.id === 'usersModal') e.currentTarget.classList.remove('show');
     });
     document.getElementById('usersList').addEventListener('click', async (e) => {
+      const pk = e.target.closest('[data-pk-admin]');
+      if (pk) {
+        if (!pk.dataset.armed) {
+          pk.dataset.armed = '1';
+          pk.textContent = 'לחצו שוב להסרה';
+          setTimeout(() => { delete pk.dataset.armed; pk.textContent = 'הסר'; }, 3500);
+          return;
+        }
+        pk.disabled = true;
+        try {
+          await call('svr_passkey_remove', { p_id: pk.dataset.pkAdmin });
+          toast('טביעת האצבע הוסרה. המשתמש עדיין יכול להיכנס עם סיסמה', 'ok');
+          await loadUsers();
+        } catch (err) {
+          pk.disabled = false;
+          if (err.code !== 'AUTH') toast(errText(err), 'err');
+        }
+        return;
+      }
       const dev = e.target.closest('[data-dev-act]');
       if (dev) {
         const action = dev.dataset.devAct;
@@ -9933,6 +10079,94 @@ renderTable();
         if (err.code !== 'AUTH') setFormError('passwordError', err.code === 'BAD_LOGIN' ? 'הסיסמה הנוכחית שגויה' : errText(err));
       }
     });
+
+    // ---------- the menu: set up a fingerprint on this device ----------
+    let myPasskeys = [];
+
+    function renderPasskeys() {
+      const mine = storedPasskeys();
+      const here = myPasskeys.some(k => mine.includes(k.cred));
+      document.getElementById('passkeyList').innerHTML = myPasskeys.length
+        ? myPasskeys.map(k => '<div class="dev-row"><div class="dev-info"><b>' + escapeHtml(k.label || 'מכשיר') + '</b>' +
+            (mine.includes(k.cred) ? '<span class="role-pill">המכשיר הזה</span>' : '') +
+            '<span class="dev-meta">הופעל ב־' + escapeHtml(fmtWhen(k.created_at)) +
+            (k.last_used ? ' · כניסה אחרונה ' + escapeHtml(fmtWhen(k.last_used)) : '') + '</span></div>' +
+            '<div class="dev-acts"><button type="button" class="btn btn-ghost btn-sm" data-pk-mine="' + escapeHtml(k.id) + '">הסר</button></div></div>').join('')
+        : '<div class="dev-none">עוד לא הופעלה טביעת אצבע.</div>';
+      document.getElementById('passkeyAdd').hidden = here;
+    }
+
+    async function openPasskeyModal() {
+      setFormError('passkeyError', '');
+      myPasskeys = [];
+      renderPasskeys();
+      document.getElementById('passkeyModal').classList.add('show');
+      try {
+        myPasskeys = await call('svr_passkeys_mine') || [];
+        renderPasskeys();
+      } catch (err) {
+        if (err.code !== 'AUTH') setFormError('passkeyError', errText(err));
+      }
+    }
+
+    document.getElementById('btnPasskey').addEventListener('click', () => { closeDrawer(); openPasskeyModal(); });
+    document.getElementById('passkeyClose').addEventListener('click', () => document.getElementById('passkeyModal').classList.remove('show'));
+    document.getElementById('passkeyModal').addEventListener('click', async (e) => {
+      if (e.target.id === 'passkeyModal') { e.currentTarget.classList.remove('show'); return; }
+      const del = e.target.closest('[data-pk-mine]');
+      if (!del) return;
+      const k = myPasskeys.find(x => x.id === del.dataset.pkMine);
+      del.disabled = true;
+      try {
+        await call('svr_passkey_remove', { p_id: del.dataset.pkMine });
+        if (k) storePasskeys(storedPasskeys().filter(id => id !== k.cred));
+        myPasskeys = await call('svr_passkeys_mine') || [];
+        renderPasskeys();
+        updatePasskeyUi();
+        toast('טביעת האצבע הוסרה', 'ok');
+      } catch (err) {
+        del.disabled = false;
+        if (err.code !== 'AUTH') setFormError('passkeyError', errText(err));
+      }
+    });
+    document.getElementById('passkeyAdd').addEventListener('click', async () => {
+      const btn = document.getElementById('passkeyAdd');
+      btn.disabled = true;
+      setFormError('passkeyError', '');
+      try {
+        const begin = await call('svr_passkey_begin_add');
+        const cred = await navigator.credentials.create({ publicKey: {
+          challenge: b64uToBuf(begin.challenge),
+          rp: { id: location.hostname, name: 'מכירות מול החזרות' },
+          user: { id: b64uToBuf(begin.user.id), name: begin.user.name, displayName: begin.user.display },
+          pubKeyCredParams: [{ type: 'public-key', alg: -7 }, { type: 'public-key', alg: -257 }],
+          authenticatorSelection: { authenticatorAttachment: 'platform', userVerification: 'required', residentKey: 'preferred' },
+          excludeCredentials: (begin.exclude || []).map(id => ({ type: 'public-key', id: b64uToBuf(id) })),
+          attestation: 'none', timeout: 60000
+        } });
+        const r = cred.response;
+        if (!r.getPublicKey || !r.getPublicKeyAlgorithm) throw { code: 'PASSKEY_UNSUPPORTED' };
+        myPasskeys = await call('svr_passkey_add', {
+          p_cred: cred.id, p_public: bufToB64u(r.getPublicKey()), p_alg: r.getPublicKeyAlgorithm(),
+          p_client: bufToB64u(r.clientDataJSON), p_label: deviceLabel()
+        }) || [];
+        storePasskeys(Array.from(new Set(storedPasskeys().concat(cred.id))));
+        renderPasskeys();
+        updatePasskeyUi();
+        toast('הכניסה בטביעת אצבע הופעלה במכשיר הזה', 'ok');
+      } catch (err) {
+        if (err && err.name === 'NotAllowedError') setFormError('passkeyError', 'ההפעלה בוטלה');
+        else if (err && err.name === 'InvalidStateError') setFormError('passkeyError', 'טביעת אצבע כבר מופעלת במכשיר הזה');
+        else if (err && err.code !== 'AUTH') setFormError('passkeyError', errText(err && err.code ? err : { code: 'PASSKEY' }));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    // the admin's list in the users window: every fingerprint, with a way to remove a lost phone's
+    let passkeysCache = [];
+
+    detectPasskeys();
 
     // ---------- install as an app ----------
     let installEvent = null;
