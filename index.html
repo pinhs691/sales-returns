@@ -126,6 +126,7 @@
       padding: 8px 12px; font-size: 0.84rem; font-weight: 700; text-align: right;
     }
     .auth-card .btn { min-height: 46px; font-size: 0.95rem; }
+    .auth-link { border: none; background: none; font: inherit; font-size: 0.9rem; font-weight: 700; color: var(--accent); cursor: pointer; text-decoration: underline; padding: 8px; }
     .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px 18px; }
     @media (max-width: 560px) { .form-grid { grid-template-columns: 1fr; } }
     .form-grid .wide { grid-column: 1 / -1; }
@@ -2056,6 +2057,7 @@
       <div class="form-error" id="authError" hidden></div>
       <button type="submit" class="btn btn-primary" id="authSubmit" hidden>כניסה</button>
       <button type="button" class="btn btn-ghost" id="authPasskey" hidden>כניסה עם טביעת אצבע</button>
+      <button type="button" class="auth-link" id="authUsePassword" hidden>כניסה עם סיסמה</button>
       <button type="button" class="btn btn-ghost" id="authRetry" hidden>נסו שוב</button>
     </form>
   </div>
@@ -3051,9 +3053,35 @@
       return passkeyAvailable && storedPasskeys().length > 0;
     }
 
+    // On a device with a fingerprint the sign-in screen shows only the fingerprint, and the password
+    // fields wait behind "כניסה עם סיסמה" (authPwOpen).
+    let authPwOpen = false;
+    let passkeyFailed = false;      // the last try did not work: the button offers to try again
+    let passkeyAutoTried = false;   // the fingerprint opens by itself once; never after "יציאה"
+    let passkeyBusy = false;
+    let passkeyAbort = null;
+
+    function passkeyLock() {
+      return authMode === 'login' && passkeyUsable() && !authPwOpen;
+    }
+
     function updatePasskeyUi() {
-      document.getElementById('authPasskey').hidden = !(authMode === 'login' && passkeyUsable());
-      document.getElementById('btnPasskey').hidden = !passkeyAvailable;
+      const lock = passkeyLock();
+      const form = authMode === 'login' || authMode === 'setup';
+      const show = (id, on) => { document.getElementById(id).hidden = !on; };
+      show('authUserField', form && !lock);
+      show('authPassField', form && !lock);
+      show('authSubmit', form && !lock);
+      show('authDeviceField', authMode === 'login' && !lock && !deviceKnown());
+      show('authPasskey', authMode === 'login' && passkeyUsable());
+      show('authUsePassword', lock);
+      show('btnPasskey', passkeyAvailable);
+      const btn = document.getElementById('authPasskey');
+      btn.className = 'btn ' + (lock ? 'btn-primary' : 'btn-ghost');
+      btn.textContent = lock && passkeyFailed ? 'נסו שוב עם טביעת אצבע' : 'כניסה עם טביעת אצבע';
+      if (authMode === 'login') {
+        document.getElementById('authIntro').textContent = lock ? 'היכנסו עם טביעת אצבע' : 'הכניסו שם משתמש וסיסמה';
+      }
     }
 
     async function detectPasskeys() {
@@ -3062,6 +3090,73 @@
           await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable());
       } catch (e) { passkeyAvailable = false; }
       updatePasskeyUi();
+      autoPasskey();
+    }
+
+    // Opens the fingerprint by itself, once, when the sign-in screen is really in front of the user.
+    // The short wait lets a phone give the app the focus when it comes back from the background.
+    function autoPasskey() {
+      if (me || document.hidden || passkeyAutoTried || !passkeyLock()) return;
+      passkeyAutoTried = true;
+      setTimeout(() => {
+        if (!me && !document.hidden && passkeyLock()) passkeyLogin(true);
+      }, 250);
+    }
+
+    async function passkeyLogin(auto) {
+      if (authMode !== 'login' || passkeyBusy) return;
+      passkeyBusy = true;
+      const btn = document.getElementById('authPasskey');
+      btn.disabled = true;
+      if (!auto) setAuthError('');
+      let started = Date.now();
+      passkeyAbort = new AbortController();
+      try {
+        const begin = await rpc('svr_passkey_begin_login');
+        started = Date.now();
+        const cred = await navigator.credentials.get({ signal: passkeyAbort.signal, publicKey: {
+          challenge: b64uToBuf(begin.challenge), rpId: location.hostname, userVerification: 'required', timeout: 60000,
+          allowCredentials: storedPasskeys().map(id => ({ type: 'public-key', id: b64uToBuf(id) }))
+        } });
+        const r = cred.response;
+        let res;
+        try {
+          const resp = await fetch(PASSKEY_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: cred.id, authenticatorData: bufToB64u(r.authenticatorData), clientDataJSON: bufToB64u(r.clientDataJSON),
+              signature: bufToB64u(r.signature), device: deviceKey, label: deviceLabel(), name: document.getElementById('authDevice').value.trim()
+            })
+          });
+          res = await resp.json();
+        } catch (e) {
+          throw { code: 'NETWORK' };
+        }
+        if (!res || res.error) {
+          passkeyFailed = true;
+          // this key is not good any more (the admin removed it): the password is the way in
+          if (res && res.error === 'BAD_PASSKEY') authPwOpen = true;
+          setAuthError(errText({ code: res && res.error }));
+          return;
+        }
+        await finishLogin(res);
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        if (err && err.name === 'NotAllowedError') {
+          // an answer this fast means no prompt was shown (an iPhone wants a tap first): just the button
+          if (auto && Date.now() - started < 500) return;
+          passkeyFailed = true;
+          if (!auto) setAuthError('הכניסה בטביעת אצבע בוטלה. נסו שוב או היכנסו עם סיסמה');
+          return;
+        }
+        passkeyFailed = true;
+        setAuthError(errText(err && err.code ? err : { code: 'PASSKEY' }));
+      } finally {
+        passkeyBusy = false;
+        btn.disabled = false;
+        updatePasskeyUi();
+      }
     }
 
     // ---------- sign out after an hour without use ----------
@@ -3096,6 +3191,7 @@
       me = null;
       storeToken();
       clearLocalData();
+      passkeyAutoTried = false;
       showAuth('login', 'נותקת אחרי ' + (IDLE_MINUTES === 60 ? 'שעה' : IDLE_MINUTES + ' דקות') + ' ללא שימוש. התחברו שוב');
       if (old) rpc('svr_logout', { p_token: old }).catch(() => {});
     }
@@ -3196,16 +3292,12 @@
       closeDrawer();
       document.getElementById('appRoot').hidden = true;
       document.getElementById('authScreen').hidden = false;
-      const form = mode === 'login' || mode === 'setup';
       const show = (id, on) => { document.getElementById(id).hidden = !on; };
       show('authNameField', mode === 'setup');
-      show('authUserField', form);
-      show('authPassField', form);
       show('authPassHint', mode === 'setup');
-      show('authDeviceField', mode === 'login' && !deviceKnown());
-      show('authSubmit', form);
       show('authRetry', mode === 'error');
-      updatePasskeyUi();
+      authPwOpen = false;
+      passkeyFailed = false;
       document.getElementById('authPass').value = '';
       document.getElementById('authPass').autocomplete = mode === 'setup' ? 'new-password' : 'current-password';
       document.getElementById('authSubmit').textContent = mode === 'setup' ? 'יצירת מנהל וכניסה' : 'כניסה';
@@ -3213,7 +3305,9 @@
         mode === 'loading' ? 'מתחבר...' :
         mode === 'setup' ? 'כניסה ראשונה: בחרו שם משתמש וסיסמה למנהל המערכת' :
         mode === 'login' ? 'הכניסו שם משתמש וסיסמה' : 'לא הצלחנו להתחבר';
+      updatePasskeyUi();
       setAuthError(message || '');
+      autoPasskey();
     }
 
     function clearLocalData() {
@@ -3255,6 +3349,7 @@
       me = null;
       storeToken();
       clearLocalData();
+      passkeyAutoTried = false;
       showAuth('login', ERR_TEXT.AUTH);
     }
 
@@ -3318,6 +3413,8 @@
           return;
         }
         const status = await rpc('svr_status');
+        // know about the fingerprint first, so the password fields do not flash on the way to it
+        await Promise.race([passkeyReady, new Promise(done => setTimeout(done, 1500))]);
         showAuth(status && status.has_users ? 'login' : 'setup');
       } catch (err) {
         showAuth('error', err.status === 404 ? 'מסד הנתונים של הכלי עדיין לא הוגדר בשרת.' : errText(err));
@@ -9718,44 +9815,14 @@ renderTable();
       await enterApp();
     }
 
-    document.getElementById('authPasskey').addEventListener('click', async () => {
-      if (authMode !== 'login') return;
-      const btn = document.getElementById('authPasskey');
-      btn.disabled = true;
+    document.getElementById('authPasskey').addEventListener('click', () => passkeyLogin(false));
+    document.getElementById('authUsePassword').addEventListener('click', () => {
+      authPwOpen = true;
+      passkeyAutoTried = true;
+      if (passkeyAbort) passkeyAbort.abort();
       setAuthError('');
-      try {
-        const begin = await rpc('svr_passkey_begin_login');
-        const cred = await navigator.credentials.get({ publicKey: {
-          challenge: b64uToBuf(begin.challenge), rpId: location.hostname, userVerification: 'required', timeout: 60000,
-          allowCredentials: storedPasskeys().map(id => ({ type: 'public-key', id: b64uToBuf(id) }))
-        } });
-        const r = cred.response;
-        let res;
-        try {
-          const resp = await fetch(PASSKEY_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              id: cred.id, authenticatorData: bufToB64u(r.authenticatorData), clientDataJSON: bufToB64u(r.clientDataJSON),
-              signature: bufToB64u(r.signature), device: deviceKey, label: deviceLabel(), name: document.getElementById('authDevice').value.trim()
-            })
-          });
-          res = await resp.json();
-        } catch (e) {
-          throw { code: 'NETWORK' };
-        }
-        if (!res || res.error) {
-          setAuthError(errText({ code: res && res.error }));
-          return;
-        }
-        await finishLogin(res);
-      } catch (err) {
-        setAuthError(err && err.name === 'NotAllowedError'
-          ? 'הכניסה בטביעת אצבע בוטלה. אפשר להיכנס עם סיסמה'
-          : errText(err && err.code ? err : { code: 'PASSKEY' }));
-      } finally {
-        btn.disabled = false;
-      }
+      updatePasskeyUi();
+      document.getElementById('authUser').focus();
     });
 
     document.getElementById('btnLogout').addEventListener('click', () => {
@@ -9764,6 +9831,8 @@ renderTable();
       me = null;
       storeToken();
       clearLocalData();
+      // whoever signed out on purpose does not get the fingerprint jumping at them; a tap opens it
+      passkeyAutoTried = true;
       showAuth('login');
       // the device keeps getting this user's notifications (only the switch in the menu turns them
       // off); if someone else signs in here, they move to that user (syncPushSub)
@@ -9782,6 +9851,7 @@ renderTable();
     setInterval(checkIdle, 30000);
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) checkIdle();
+      if (!document.hidden) autoPasskey();
       if (!document.hidden && me) clearDeletedNotifications();
       if (document.hidden || !me || Date.now() - lastSync < 120000) return;
       syncData(false).catch(() => {});
@@ -10166,7 +10236,7 @@ renderTable();
     // the admin's list in the users window: every fingerprint, with a way to remove a lost phone's
     let passkeysCache = [];
 
-    detectPasskeys();
+    const passkeyReady = detectPasskeys();
 
     // ---------- install as an app ----------
     let installEvent = null;
