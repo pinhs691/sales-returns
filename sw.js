@@ -38,7 +38,9 @@ self.addEventListener('push', e => {
     self.registration.showNotification(d.title || 'מכירות מול החזרות', {
       body: d.body || '',
       icon: 'icon-192.png',
-      badge: 'icon-192.png',
+      // the small icon in the phone's status bar: Android paints only its shape white, so it is
+      // white bars on a transparent background (the full app icon came out as a white square)
+      badge: 'badge-96.png',
       dir: 'rtl',
       lang: 'he',
       tag: d.tag || undefined,
@@ -61,7 +63,7 @@ function quickAck(data) {
   }).catch(() =>
     // no connection, or the message was deleted: say so, so nobody thinks it went out
     self.registration.showNotification('"קיבלתי" לא נשלח', {
-      body: 'פתחו את ההודעה באפליקציה ונסו שוב', icon: 'icon-192.png', badge: 'icon-192.png', dir: 'rtl', lang: 'he',
+      body: 'פתחו את ההודעה באפליקציה ונסו שוב', icon: 'icon-192.png', badge: 'badge-96.png', dir: 'rtl', lang: 'he',
       data: { url: (data && data.url) || './' }
     }));
 }
